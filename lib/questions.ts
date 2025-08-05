@@ -1,0 +1,40 @@
+export const questionSets: Record<string, Array<{ id: string; text: string }>> = {
+  "Data Hygiene & Business Clarity Diagnostic": [
+    { id: "mvp-FV3", text: "Do you have a place where you keep all your customer or business info?" },
+    { id: "mvp-FV5", text: "Do you track sales, expenses, and customer info in one place?" },
+    { id: "mvp-FV6", text: "Is it hard to keep your business data organized and under control?" },
+    { id: "mvp-FV7", text: "Do you have to type the same info into more than one system?" },
+    { id: "mvp-FV38", text: "Do your tools (like sales, inventory, or accounting) talk to each other?" },
+    { id: "mvp-FV45", text: "Do you have data sitting around that you don't really use?" },
+    { id: "mvp-FV33", text: "Is it hard to find or understand your past business info or customer lists?" },
+    { id: "mvp-FV39", text: "Do you use any tools to understand your money flow or budget?" },
+    { id: "mvp-FV49", text: "Do your business reports sometimes have mistakes or missing numbers?" },
+    { id: "mvp-GD0", text: "Do you use any tool or system to track customer leads?" },
+  ],
+
+  "Marketing Effectiveness Diagnostic": [
+    { id: "mvp2-FM1", text: "Is it hard to know if your ads or emails are working?" },
+    { id: "mvp2-FM2", text: "Do you use digital tools to reach certain types of customers?" },
+    { id: "mvp2-FM3", text: "Do you track what customers are saying or complaining about?" },
+    { id: "mvp2-FM4", text: "Have you studied how people find you and changed your marketing?" },
+    { id: "mvp2-FM5", text: "Do you gather feedback to help improve what you offer?" },
+    { id: "mvp2-FM6", text: "Do you look at what others charge before setting your prices?" },
+    { id: "mvp2-FM7", text: "Do you check and reply to online reviews?" },
+    { id: "mvp2-FM8", text: "Do you have a regular way to get feedback from customers?" },
+    { id: "mvp2-FM9", text: "Is your brand message clear and consistent?" },
+    { id: "mvp2-FM10", text: "Have you gotten clearer about who your best customers are?" },
+  ],
+
+  "Cash Flow & Financial Clarity Diagnostic": [
+    { id: "mvp3-FC01", text: "Have you made a profit in any of the last 3 years?" },
+    { id: "mvp3-FC02", text: "Do you have a system to track your income and expenses?" },
+    { id: "mvp3-FC03", text: "Have you figured out how your business will make money?" },
+    { id: "mvp3-FC04", text: "Do you know how your sales connect to your profits?" },
+    { id: "mvp3-FC05", text: "Do you know your startup and ongoing costs?" },
+    { id: "mvp3-FC06", text: "Have you calculated your profit per sale and breakeven point?" },
+    { id: "mvp3-FC07", text: "Do you know how much funding you need to start making money?" },
+    { id: "mvp3-FC08", text: "Have you picked your prices?" },
+    { id: "mvp3-FC09", text: "Do you know where your sales will come from?" },
+    { id: "mvp3-FC10", text: "Do you set monthly sales goals?" },
+  ],
+}

@@ -1,0 +1,26 @@
+{
+  "Marketing Effectiveness Diagnostic": {
+    "question_sets": [
+      [8, 9, 7, 8, 6, 9, 8, 7, 8, 9],
+      [7, 8, 6, 9, 5, 8, 7, 6, 8, 7],
+      [9, 8, 8, 9, 7, 8, 9, 8, 9, 8]
+    ],
+    "comparison_scores": [
+      [80, 75, 90],
+      [85, 70, 88],
+      [78, 82, 91]
+    ]
+  },
+  "Cash Flow & Financial Clarity Diagnostic": {
+    "question_sets": [
+      [6, 7, 8, 7, 6, 8, 7, 6, 7, 8],
+      [7, 6, 7, 8, 7, 7, 8, 7, 6, 7],
+      [8, 7, 6, 7, 8, 7, 6, 8, 7, 6]
+    ],
+    "comparison_scores": [
+      [72, 68, 80],
+      [75, 70, 78],
+      [70, 74, 82]
+    ]
+  }
+} 
