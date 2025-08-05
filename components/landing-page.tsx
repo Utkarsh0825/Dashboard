@@ -265,9 +265,6 @@ export default function LandingPage({ onExploreTools, onDashboard, onContact, on
           <p className="text-lg text-muted-foreground mb-4 font-medium">
             Turn 3 minutes into smarter decisions. No sign-up. Just answers to help you grow or start your business.
           </p>
-          <p className="text-lg text-muted-foreground leading-relaxed">
-            NNX1™ is built to help small businesses grow with clarity, confidence, and tools that meet you where you are — one smart step at a time.
-          </p>
         </motion.div>
 
         {/* CTA Buttons */}
@@ -322,7 +319,7 @@ export default function LandingPage({ onExploreTools, onDashboard, onContact, on
           className="max-w-4xl mx-auto"
         >
           <p className="text-muted-foreground italic text-xl leading-relaxed">
-            NNX1™ Small Business Solutions is here to help other small businesses grow, one smart, simple step at a time. Strength is in our numbers!
+            NNX1™ is built to help small businesses grow with clarity, confidence, and tools that meet you where you are — one smart step at a time.
           </p>
         </motion.div>
       </div>

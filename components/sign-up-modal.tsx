@@ -1,12 +1,36 @@
 "use client"
 
-import { useState } from "react"
+import { useState, Fragment } from "react"
 import { Dialog, DialogContent } from "@/components/ui/dialog"
+import { Listbox, Transition } from "@headlessui/react"
+import { ChevronDownIcon, CheckIcon } from "@heroicons/react/20/solid"
 
 interface SignUpModalProps {
   isOpen: boolean
   onClose: () => void
 }
+
+const industryOptions = [
+  "Administrative Support & Waste Management Services",
+  "Agriculture, Forestry, Fishing & Hunting",
+  "Construction",
+  "Financial Activities",
+  "Health Care & Social Assistance",
+  "Information (Publishing, IT, Data Services)",
+  "Manufacturing",
+  "Other Services (Repair, Personal, Civic, Religious Services)",
+  "Professional, Scientific & Technical Services (Consulting, Legal, Design)",
+  "Real Estate & Rental & Leasing",
+  "Retail Trade",
+  "Transportation, Warehousing & Utilities",
+  "Educational Services",
+  "Management of Companies & Enterprises",
+  "Wholesale Trade",
+  "Accommodation & Food Services",
+  "Arts, Entertainment & Recreation",
+  "Mining & Oil & Gas Extraction",
+  "Natural Resources & Mining (including utilities)"
+]
 
 export default function SignUpModal({ isOpen, onClose }: SignUpModalProps) {
   const [formData, setFormData] = useState({
@@ -26,12 +50,24 @@ export default function SignUpModal({ isOpen, onClose }: SignUpModalProps) {
     }))
   }
 
+  const handleZipCodeChange = (value: string) => {
+    // Only allow numbers and limit to 5 digits
+    const numericValue = value.replace(/\D/g, '').slice(0, 5)
+    handleInputChange("zipCode", numericValue)
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
     // Validate required fields
     if (!formData.name || !formData.company || !formData.industry || !formData.zipCode || !formData.email) {
       alert("Please fill in all fields")
+      return
+    }
+
+    // Validate zip code length
+    if (formData.zipCode.length !== 5) {
+      alert("Please enter a valid 5-digit zip code")
       return
     }
 
@@ -128,22 +164,64 @@ export default function SignUpModal({ isOpen, onClose }: SignUpModalProps) {
               </div>
               
               <div className="space-y-2">
-                <input
-                  type="text"
-                  placeholder="Industry"
-                  value={formData.industry}
-                  onChange={(e) => handleInputChange("industry", e.target.value)}
-                  className="w-full px-4 py-3 rounded-lg bg-muted border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-                  required
-                />
+                <Listbox value={formData.industry} onChange={(value) => handleInputChange("industry", value)}>
+                  <div className="relative">
+                    <Listbox.Button className="relative w-full px-4 py-3 rounded-lg bg-muted border border-border text-left text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent cursor-pointer">
+                      <span className={`block truncate ${formData.industry ? 'text-foreground' : 'text-muted-foreground'}`}>
+                        {formData.industry || "Select Industry"}
+                      </span>
+                      <span className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2">
+                        <ChevronDownIcon
+                          className="h-5 w-5 text-muted-foreground"
+                          aria-hidden="true"
+                        />
+                      </span>
+                    </Listbox.Button>
+                    <Transition
+                      as={Fragment}
+                      leave="transition ease-in duration-100"
+                      leaveFrom="opacity-100"
+                      leaveTo="opacity-0"
+                    >
+                      <Listbox.Options className="absolute z-10 mt-1 max-h-48 w-full overflow-auto rounded-lg bg-card border border-border shadow-lg focus:outline-none">
+                        {industryOptions.map((industry, industryIdx) => (
+                          <Listbox.Option
+                            key={industryIdx}
+                            className={({ active }) =>
+                              `relative cursor-pointer select-none py-3 px-4 ${
+                                active ? 'bg-primary/10 text-primary' : 'text-foreground'
+                              }`
+                            }
+                            value={industry}
+                          >
+                            {({ selected }) => (
+                              <>
+                                <span className={`block ${selected ? 'font-medium' : 'font-normal'}`}>
+                                  {industry}
+                                </span>
+                                {selected ? (
+                                  <span className="absolute inset-y-0 right-0 flex items-center pr-4 text-primary">
+                                    <CheckIcon className="h-5 w-5" aria-hidden="true" />
+                                  </span>
+                                ) : null}
+                              </>
+                            )}
+                          </Listbox.Option>
+                        ))}
+                      </Listbox.Options>
+                    </Transition>
+                  </div>
+                </Listbox>
               </div>
               
               <div className="space-y-2">
                 <input
                   type="text"
-                  placeholder="Zip Code"
+                  placeholder="Zip Code (5 digits)"
                   value={formData.zipCode}
-                  onChange={(e) => handleInputChange("zipCode", e.target.value)}
+                  onChange={(e) => handleZipCodeChange(e.target.value)}
+                  maxLength={5}
+                  pattern="[0-9]{5}"
                   className="w-full px-4 py-3 rounded-lg bg-muted border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
                   required
                 />

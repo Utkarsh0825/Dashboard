@@ -237,6 +237,7 @@ export default function NBLKToolsHub() {
             onSubmit={handleEmailSubmit}
             onBack={() => setCurrentView("partial-report")}
             onLogoClick={handleLogoClick}
+            onExploreTools={() => navigateToView("tools")}
             toolName={selectedTool}
             score={score}
             answers={answers}

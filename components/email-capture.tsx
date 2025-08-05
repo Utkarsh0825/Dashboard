@@ -1,24 +1,49 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, Fragment } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import { ChevronLeft, X as CloseIcon, CheckCircle, Mail, Phone, AlertTriangle, TrendingUp, Lock, Check, ChevronDown, ChevronUp } from "lucide-react"
+import { ChevronLeft, X, CheckCircle, Mail, Phone, AlertTriangle, TrendingUp, Lock, Check, ChevronDown, ChevronUp } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { ThemeToggle } from "@/components/ui/theme-toggle"
+import { Listbox, Transition } from "@headlessui/react"
+import { ChevronDownIcon, CheckIcon } from "@heroicons/react/20/solid"
 import type { DiagnosticAnswer } from "@/app/page"
 
 interface EmailCaptureProps {
   onSubmit?: (name: string, email: string) => void
   onBack?: () => void
   onLogoClick?: () => void
+  onExploreTools?: () => void
   toolName?: string
   score?: number
   answers?: DiagnosticAnswer[]
 }
 
-export default function EmailCapture({ onSubmit, onBack, toolName = "", score = 0, answers = [] }: EmailCaptureProps) {
+const industryOptions = [
+  "Administrative Support & Waste Management Services",
+  "Agriculture, Forestry, Fishing & Hunting",
+  "Construction",
+  "Financial Activities",
+  "Health Care & Social Assistance",
+  "Information (Publishing, IT, Data Services)",
+  "Manufacturing",
+  "Other Services (Repair, Personal, Civic, Religious Services)",
+  "Professional, Scientific & Technical Services (Consulting, Legal, Design)",
+  "Real Estate & Rental & Leasing",
+  "Retail Trade",
+  "Transportation, Warehousing & Utilities",
+  "Educational Services",
+  "Management of Companies & Enterprises",
+  "Wholesale Trade",
+  "Accommodation & Food Services",
+  "Arts, Entertainment & Recreation",
+  "Mining & Oil & Gas Extraction",
+  "Natural Resources & Mining (including utilities)"
+]
+
+export default function EmailCapture({ onSubmit, onBack, onLogoClick, onExploreTools, toolName = "", score = 0, answers = [] }: EmailCaptureProps) {
   const [contactDialogOpen, setContactDialogOpen] = useState(false)
   const [showSuccessModal, setShowSuccessModal] = useState(false)
   const [resendCooldown, setResendCooldown] = useState(0)
@@ -46,10 +71,23 @@ export default function EmailCapture({ onSubmit, onBack, toolName = "", score = 
     }
   }, [resendCooldown])
 
+  const handleZipCodeChange = (value: string) => {
+    // Only allow numbers and limit to 5 digits
+    const numericValue = value.replace(/\D/g, '').slice(0, 5)
+    setFullZipCode(numericValue)
+  }
+
   // Full diagnostic submit - now sends email with all collected information
   const handleFullSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!fullName.trim() || !fullCompany.trim() || !fullIndustry.trim() || !fullZipCode.trim() || !fullEmail.trim()) return
+    
+    // Validate zip code length
+    if (fullZipCode.length !== 5) {
+      alert("Please enter a valid 5-digit zip code")
+      return
+    }
+    
     setIsSubmittingFull(true)
     
     try {
@@ -447,8 +485,15 @@ Phone: (212) 598-3030
       {/* Main Content */}
       <div className="flex flex-col flex-1 items-center justify-start max-w-lg mx-auto gap-6 mt-6">
         {/* Single Form Box */}
-        <div className="w-full rounded-lg border border-border hover:border-border p-6 bg-card/5 flex flex-col gap-4">
-          <h1 className="text-xl font-medium text-center">Preview Your Beta Report</h1>
+                 <div className="w-full rounded-lg border border-border hover:border-border p-6 bg-card/5 flex flex-col gap-4 relative">
+           <button
+             onClick={onBack}
+             className="absolute top-4 right-4 p-2 rounded-full hover:bg-muted/50 transition-colors"
+             aria-label="Close"
+           >
+             <X className="h-5 w-5 text-muted-foreground" />
+           </button>
+           <h1 className="text-xl font-medium text-center">Preview Your Beta Report</h1>
           <p className="text-sm text-muted-foreground text-center mb-4">
             This is a test version of NNX Small Business Solutions module. Sign up to view your sample diagnostic module report and get notified when the full platform launches.
           </p>
@@ -470,20 +515,64 @@ Phone: (212) 598-3030
               className="bg-muted border border-border text-foreground placeholder-muted-foreground rounded-lg px-4 py-4 text-base focus:ring-1 focus:ring-primary focus:outline-none transition-all duration-300"
                 required
               />
+                             <div className="relative">
+                 <Listbox value={fullIndustry} onChange={setFullIndustry}>
+                   <div className="relative">
+                                           <Listbox.Button className="relative w-full h-[52px] px-4 py-4 rounded-lg bg-muted border border-border text-left text-foreground placeholder-muted-foreground focus:ring-1 focus:ring-primary focus:outline-none transition-all duration-300 cursor-pointer text-base flex items-center">
+                       <span className={`block truncate ${fullIndustry ? 'text-foreground' : 'text-muted-foreground'}`}>
+                         {fullIndustry || "Select Industry"}
+                       </span>
+                       <span className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2">
+                         <ChevronDownIcon
+                           className="h-5 w-5 text-muted-foreground"
+                           aria-hidden="true"
+                         />
+                       </span>
+                     </Listbox.Button>
+                    <Transition
+                      as={Fragment}
+                      leave="transition ease-in duration-100"
+                      leaveFrom="opacity-100"
+                      leaveTo="opacity-0"
+                    >
+                      <Listbox.Options className="absolute z-10 mt-1 max-h-48 w-full overflow-auto rounded-lg bg-card border border-border shadow-lg focus:outline-none">
+                        {industryOptions.map((industry, industryIdx) => (
+                          <Listbox.Option
+                            key={industryIdx}
+                            className={({ active }) =>
+                              `relative cursor-pointer select-none py-3 px-4 ${
+                                active ? 'bg-primary/10 text-primary' : 'text-foreground'
+                              }`
+                            }
+                            value={industry}
+                          >
+                            {({ selected }) => (
+                              <>
+                                <span className={`block ${selected ? 'font-medium' : 'font-normal'}`}>
+                                  {industry}
+                                </span>
+                                {selected ? (
+                                  <span className="absolute inset-y-0 right-0 flex items-center pr-4 text-primary">
+                                    <CheckIcon className="h-5 w-5" aria-hidden="true" />
+                                  </span>
+                                ) : null}
+                              </>
+                            )}
+                          </Listbox.Option>
+                        ))}
+                      </Listbox.Options>
+                    </Transition>
+                  </div>
+                </Listbox>
+              </div>
               <Input
                 type="text"
-                placeholder="Industry"
-                value={fullIndustry}
-                onChange={(e) => setFullIndustry(e.target.value)}
-              className="bg-muted border border-border text-foreground placeholder-muted-foreground rounded-lg px-4 py-4 text-base focus:ring-1 focus:ring-primary focus:outline-none transition-all duration-300"
-                required
-              />
-              <Input
-                type="text"
-                placeholder="Zip Code"
-              value={fullZipCode}
-              onChange={(e) => setFullZipCode(e.target.value)}
-              className="bg-muted border border-border text-foreground placeholder-muted-foreground rounded-lg px-4 py-4 text-base focus:ring-1 focus:ring-primary focus:outline-none transition-all duration-300"
+                placeholder="Zip Code (5 digits)"
+                value={fullZipCode}
+                onChange={(e) => handleZipCodeChange(e.target.value)}
+                maxLength={5}
+                pattern="[0-9]{5}"
+                className="bg-muted border border-border text-foreground placeholder-muted-foreground rounded-lg px-4 py-4 text-base focus:ring-1 focus:ring-primary focus:outline-none transition-all duration-300"
                 required
               />
               <Input
@@ -531,24 +620,46 @@ Phone: (212) 598-3030
             </motion.div>
           
               
-            {/* Resend Link */}
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.2, duration: 0.2 }}
-              className="text-center mt-2"
-            >
-              <p className="text-sm text-muted-foreground mb-1">Didn't receive the email?</p>
-              <span
-                onClick={resendCooldown === 0 ? handleResend : undefined}
-                className={`text-foreground underline text-sm cursor-pointer hover:no-underline hover:text-muted-foreground transition-colors duration-300 ${resendCooldown > 0 ? 'opacity-50 pointer-events-none cursor-not-allowed' : ''}`}
-                role="button"
-                tabIndex={0}
-                aria-disabled={resendCooldown > 0}
-              >
-                {resendCooldown > 0 ? `Resend Report (${resendCooldown}s)` : "Resend Report"}
-              </span>
-            </motion.div>
+                         {/* Resend Link */}
+             <motion.div
+               initial={{ opacity: 0 }}
+               animate={{ opacity: 1 }}
+               transition={{ delay: 0.2, duration: 0.2 }}
+               className="text-center mt-2"
+             >
+               <p className="text-sm text-muted-foreground mb-1">Didn't receive the email?</p>
+               <span
+                 onClick={resendCooldown === 0 ? handleResend : undefined}
+                 className={`text-foreground underline text-sm cursor-pointer hover:no-underline hover:text-muted-foreground transition-colors duration-300 ${resendCooldown > 0 ? 'opacity-50 pointer-events-none cursor-not-allowed' : ''}`}
+                 role="button"
+                 tabIndex={0}
+                 aria-disabled={resendCooldown > 0}
+               >
+                 {resendCooldown > 0 ? `Resend Report (${resendCooldown}s)` : "Resend Report"}
+               </span>
+             </motion.div>
+             
+             {/* Navigation Buttons */}
+             <motion.div
+               initial={{ opacity: 0 }}
+               animate={{ opacity: 1 }}
+               transition={{ delay: 0.3, duration: 0.2 }}
+               className="flex flex-col gap-3 mt-6 w-full"
+             >
+               <Button
+                 onClick={onLogoClick}
+                 className="w-full py-3 bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+               >
+                 Go to Home Page
+               </Button>
+               <Button
+                 onClick={onExploreTools}
+                 variant="outline"
+                 className="w-full py-3 border border-border text-foreground hover:bg-muted/50 transition-colors"
+               >
+                 Explore More Tools
+               </Button>
+             </motion.div>
             {/* Success Popup */}
             {showResendSuccess && (
               <div className="fixed top-6 right-6 bg-green-600 text-white px-4 py-2 rounded-lg shadow-lg z-50">

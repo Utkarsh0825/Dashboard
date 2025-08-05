@@ -518,8 +518,17 @@ export default function PartialReport({
     const percent = Math.round(((score - average) / average) * 100);
     performanceText = `You are performing better than ${percent}% of similar businesses.`;
   } else if (score < average) {
-    const percent = Math.round(((average - score) / average) * 100);
-    performanceText = `You are performing worse than ${percent}% of similar businesses.`;
+    // More motivating messages for low scores
+    if (score <= 20) {
+      performanceText = "Great start! Every business begins somewhere. Your diagnostic results show clear opportunities for growth.";
+    } else if (score <= 40) {
+      performanceText = "You're on the right track! Many successful businesses started exactly where you are. Let's build on this foundation.";
+    } else if (score <= 60) {
+      performanceText = "You're making good progress! With focused improvements, you'll see significant results quickly.";
+    } else {
+      const percent = Math.round(((average - score) / average) * 100);
+      performanceText = `You're close to the average! Just a few key improvements will put you ahead of ${percent}% of similar businesses.`;
+    }
   } else {
     performanceText = `You are performing on par with similar businesses.`;
   }
@@ -1064,9 +1073,11 @@ export default function PartialReport({
             </Button>
             <Button
               onClick={onGetFullReport}
-              className="flex-1 bg-foreground text-background hover:bg-foreground-100 rounded-lg"
+              className="flex-1 bg-foreground text-background hover:bg-foreground-100 rounded-lg text-sm leading-tight"
             >
-              Get My Results
+              <span className="text-center">
+                Get Your Detailed Report<br />for this Module
+              </span>
             </Button>
           </div>
         </footer>
