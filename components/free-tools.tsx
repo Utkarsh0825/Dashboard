@@ -8,7 +8,7 @@ import { ArrowRight, ExternalLink, Calculator, FileText, Settings, Globe, BookOp
 import { ThemeToggle } from '@/components/ui/theme-toggle'
 
 interface FreeToolsProps {
-  navigateToView: (view: string) => void
+  navigateToView: (view: any) => void
   onDashboard: () => void
   onExploreTools: () => void
   onSignUp: () => void
@@ -334,20 +334,11 @@ export default function FreeTools({ navigateToView, onDashboard, onExploreTools,
               <button
                 onClick={() => {
                   setMobileMenuOpen(false)
-                  navigateToView("how-it-works-business")
+                  navigateToView("how-it-works")
                 }}
                 className="block w-full text-left text-foreground hover:text-muted-foreground transition-colors py-3 text-lg"
               >
-                How it Works for Business
-              </button>
-              <button
-                onClick={() => {
-                  setMobileMenuOpen(false)
-                  navigateToView("how-it-works-your-business")
-                }}
-                className="block w-full text-left text-foreground hover:text-muted-foreground transition-colors py-3 text-lg"
-              >
-                How it Works for Your Business
+                How it Works
               </button>
               <button
                 onClick={() => {
@@ -492,34 +483,6 @@ export default function FreeTools({ navigateToView, onDashboard, onExploreTools,
           
           {/* Footer Links */}
           <div className="flex flex-wrap justify-center items-center text-sm">
-            <button
-              onClick={() => navigateToView("about-us")}
-              className="text-muted-foreground hover:text-foreground transition-colors"
-            >
-              About Us
-            </button>
-            <span className="text-muted-foreground mx-4"> | </span>
-            <button
-              onClick={() => navigateToView("privacy-policy")}
-              className="text-muted-foreground hover:text-foreground transition-colors"
-            >
-              Privacy Policy
-            </button>
-            <span className="text-muted-foreground mx-4"> | </span>
-            <button
-              onClick={() => navigateToView("terms-of-use")}
-              className="text-muted-foreground hover:text-foreground transition-colors"
-            >
-              Terms of Use
-            </button>
-            <span className="text-muted-foreground mx-4"> | </span>
-            <button
-              onClick={() => navigateToView("disclaimer")}
-              className="text-muted-foreground hover:text-foreground transition-colors"
-            >
-              Disclaimer
-            </button>
-            <span className="text-muted-foreground mx-4"> | </span>
             <button
               onClick={() => navigateToView("contact")}
               className="text-muted-foreground hover:text-foreground transition-colors"

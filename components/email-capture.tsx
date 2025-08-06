@@ -181,6 +181,8 @@ export default function EmailCapture({ onSubmit, onBack, onLogoClick, onExploreT
 
       const reportContent = `**Assessment:** ${toolDisplayName}
 
+**Company:** ${fullCompany}
+
 **EXECUTIVE SUMMARY**
 
 Your ${toolDisplayName} assessment reveals a score of ${score}/100, ${scoreMessage.toLowerCase()}. You have demonstrated solid business fundamentals while identifying key areas for strategic enhancement. Addressing these opportunities could significantly improve your business performance and operational efficiency.

@@ -9,7 +9,7 @@ import { ArrowLeft, Target, BarChart3, TrendingUp, Shield, Zap, Layers, Users, M
 interface HowItWorksProps {
   onBack: () => void
   onLogoClick: () => void
-  navigateToView: (view: string) => void
+  navigateToView: (view: any) => void
   onDashboard: () => void
   onExploreTools: () => void
   onSignUp: () => void

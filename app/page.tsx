@@ -9,7 +9,6 @@ import AnalysisScreen from "@/components/analysis-screen"
 import PartialReport from "@/components/partial-report"
 import EmailCapture from "@/components/email-capture"
 import ContactUs from "@/components/contact"
-import AboutUs from "@/components/about-us"
 import FreeTools from "@/components/free-tools"
 
 import Dashboard from "@/components/dashboard"
@@ -31,7 +30,6 @@ export type ViewType =
   | "questionnaire"
   | "results"
   | "admin"
-  | "about-us"
   | "tool-list"
   | "dashboard"
   | "contact"
@@ -250,17 +248,13 @@ export default function NBLKToolsHub() {
 
         
 
-        {currentView === "about-us" && <AboutUs key="about-us" onBack={() => setCurrentView(previousView)} />}
-
-
-
         {currentView === "dashboard" && <Dashboard key="dashboard" onBack={() => setCurrentView(previousView)} onLogoClick={handleLogoClick} navigateToView={navigateToView} onDashboard={() => navigateToView("dashboard")} onExploreTools={() => navigateToView("tools")} onSignUp={handleSignUp} />}
 
         {currentView === "contact" && <Contact key="contact" onBack={() => setCurrentView(previousView)} />}
 
         {currentView === "how-it-works" && <HowItWorks key="how-it-works" onBack={() => setCurrentView(previousView)} onLogoClick={handleLogoClick} navigateToView={navigateToView} onDashboard={() => navigateToView("dashboard")} onExploreTools={() => navigateToView("tools")} onSignUp={handleSignUp} />}
 
-        {currentView === "free-tools" && <FreeTools key="free-tools" onBack={() => setCurrentView(previousView)} onLogoClick={handleLogoClick} navigateToView={navigateToView} onDashboard={() => navigateToView("dashboard")} onExploreTools={() => navigateToView("tools")} onSignUp={handleSignUp} />}
+        {currentView === "free-tools" && <FreeTools key="free-tools" navigateToView={navigateToView} onDashboard={() => navigateToView("dashboard")} onExploreTools={() => navigateToView("tools")} onSignUp={handleSignUp} />}
       </AnimatePresence>
       <SignUpModal isOpen={signUpModalOpen} onClose={() => setSignUpModalOpen(false)} />
     </div>

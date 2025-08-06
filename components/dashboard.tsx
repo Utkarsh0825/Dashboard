@@ -157,20 +157,11 @@ export default function Dashboard({ onBack, onLogoClick, navigateToView, onDashb
               <button
                 onClick={() => {
                   setMobileMenuOpen(false)
-                  navigateToView("how-it-works-business")
+                  navigateToView("how-it-works")
                 }}
                 className="block w-full text-left text-foreground hover:text-muted-foreground transition-colors py-3 text-lg"
               >
-                How it Works for Business
-              </button>
-              <button
-                onClick={() => {
-                  setMobileMenuOpen(false)
-                  navigateToView("how-it-works-your-business")
-                }}
-                className="block w-full text-left text-foreground hover:text-muted-foreground transition-colors py-3 text-lg"
-              >
-                How it Works for Your Business
+                How it Works
               </button>
               <button
                 onClick={() => {
