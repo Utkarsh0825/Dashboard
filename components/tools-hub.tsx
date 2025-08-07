@@ -367,9 +367,9 @@ export default function ToolsHub({ onToolSelect, onLogoClick, completedTools = [
                           <tool.icon className="w-8 h-8 text-foreground" />
                           <div className="flex-1">
                             <CardTitle className="text-foreground text-base tracking-normal">{tool.name}</CardTitle>
-                            {completedTools.includes(tool.backendName) && completionTimes[tool.backendName] && (
+                            {completedTools.includes(tool.backendName) && (
                               <p className="text-xs text-green-600 dark:text-green-200 mt-1 opacity-80">
-                                completed {getTimeAgo(completionTimes[tool.backendName])}
+                                completed
                               </p>
                       )}
                     </div>
