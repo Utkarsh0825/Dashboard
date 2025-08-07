@@ -1,5 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { generatePdfReport, DiagnosticInput } from '../../lib/pdf';
+import fs from 'fs/promises';
+import path from 'path';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
@@ -77,11 +79,27 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       filename = null;
     }
 
+    // Read static PDF files
+    let staticPdf1: Buffer | null = null;
+    let staticPdf2: Buffer | null = null;
+    
+    try {
+      const publicDir = path.join(process.cwd(), 'public');
+      staticPdf1 = await fs.readFile(path.join(publicDir, 'email-report-one-page.pdf'));
+      staticPdf2 = await fs.readFile(path.join(publicDir, 'full-report-sample.pdf'));
+      console.log('Static PDFs loaded successfully');
+    } catch (staticPdfError) {
+      console.error('Failed to load static PDFs:', staticPdfError);
+      // Continue without static PDFs
+      staticPdf1 = null;
+      staticPdf2 = null;
+    }
+
     const emailData = {
       personalizations: [
         {
           to: [{ email: to, name }],
-          subject: `Your Initial Diagnostic Results Are In — Let's Keep Building`,
+          subject: `Thank You for Testing NNX1™ – Your Sample Reports Are Inside`,
         },
       ],
       from: {
@@ -98,17 +116,30 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           value: generateProfessionalEmailHTML(name, toolName, reportContent, score),
         },
       ],
-      // Include PDF attachment only if generation succeeded
-      ...(pdfBuffer && filename && {
-        attachments: [
-          {
-            content: pdfBuffer.toString('base64'),
-            filename,
-            type: 'application/pdf',
-            disposition: 'attachment',
-          },
-        ],
-      }),
+      // Include all PDF attachments
+      attachments: [
+        // Dynamic PDF (if generation succeeded)
+        ...(pdfBuffer && filename ? [{
+          content: pdfBuffer.toString('base64'),
+          filename,
+          type: 'application/pdf',
+          disposition: 'attachment',
+        }] : []),
+        // Static PDF 1
+        ...(staticPdf1 ? [{
+          content: staticPdf1.toString('base64'),
+          filename: 'NBLK-Email-Report-One-Page.pdf',
+          type: 'application/pdf',
+          disposition: 'attachment',
+        }] : []),
+        // Static PDF 2
+        ...(staticPdf2 ? [{
+          content: staticPdf2.toString('base64'),
+          filename: 'NBLK-Full-Report-Sample.pdf',
+          type: 'application/pdf',
+          disposition: 'attachment',
+        }] : []),
+      ],
     };
 
     const controller = new AbortController();
@@ -137,7 +168,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     return res.status(200).json({
       success: true,
-      message: 'Email sent successfully with professional PDF report',
+      message: 'Email sent successfully with multiple PDF reports',
     });
 
   } catch (error) {
@@ -165,57 +196,211 @@ function generateProfessionalEmailHTML(name: string, toolName: string, reportCon
     <html>
     <head>
         <meta charset="utf-8">
-        <title>Your NBLK Diagnostic Report</title>
+        <title>Thank You for Testing NNX1™ – Your Sample Reports Are Inside</title>
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
         <style>
-            body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; line-height: 1.6; color: #333; max-width: 800px; margin: 0 auto; padding: 20px; background-color: #f8f9fa; }
-            .container { background: white; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); overflow: hidden; }
-            .header { background: linear-gradient(135deg, #000 0%, #006400 100%); color: white; text-align: center; padding: 40px 20px; }
-            .logo { font-size: 36px; font-weight: bold; margin-bottom: 10px; letter-spacing: 2px; }
-            .score-section { background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); padding: 40px; text-align: center; border-bottom: 3px solid #006400; }
-            .score { font-size: 64px; font-weight: bold; color: #006400; margin-bottom: 10px; text-shadow: 2px 2px 4px rgba(0,0,0,0.1); }
-            .performance-level { font-size: 24px; font-weight: 600; color: #495057; margin-bottom: 10px; }
-            .content { padding: 40px; white-space: pre-line; font-size: 16px; text-align: left; }
-            .section { margin: 32px 40px 0 40px; text-align: left; font-size: 16px; line-height: 1.6; }
-            .section-title { font-size: 1.15rem; font-weight: bold; color: #006400; margin-bottom: 8px; margin-top: 24px; }
-            .b2b-link { font-weight: bold; color: #006400; text-decoration: underline; font-size: 16px; }
-            .footer { background: #006400; color: white; text-align: center; padding: 30px; font-size: 14px; }
-            .footer-logo { font-size: 24px; font-weight: bold; margin-bottom: 15px; letter-spacing: 1px; }
-            strong { color: #006400; }
-            .pdf-notice { background: #e8f5e8; border: 1px solid #006400; border-radius: 8px; padding: 15px; margin: 20px 0; text-align: center; }
+            * { margin: 0; padding: 0; box-sizing: border-box; }
+            body { 
+                font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
+                line-height: 1.7; 
+                color: #2d3748; 
+                background-color: #f7fafc; 
+                margin: 0; 
+                padding: 0; 
+            }
+            .container { 
+                max-width: 700px; 
+                margin: 0 auto; 
+                background: white; 
+                border-radius: 16px; 
+                box-shadow: 0 10px 25px rgba(0,0,0,0.1); 
+                overflow: hidden; 
+                margin-top: 20px; 
+                margin-bottom: 20px; 
+            }
+            .header { 
+                background: linear-gradient(135deg, #1a202c 0%, #2d3748 100%); 
+                color: white; 
+                text-align: center; 
+                padding: 50px 30px; 
+                position: relative; 
+            }
+            .header::before {
+                content: '';
+                position: absolute;
+                top: 0;
+                left: 0;
+                right: 0;
+                height: 4px;
+                background: linear-gradient(90deg, #38a169, #48bb78, #68d391);
+            }
+            .logo { 
+                font-size: 42px; 
+                font-weight: 700; 
+                margin-bottom: 15px; 
+                letter-spacing: 3px; 
+                color: #f7fafc; 
+            }
+            .subtitle { 
+                font-size: 18px; 
+                font-weight: 300; 
+                opacity: 0.9; 
+                margin-top: 10px; 
+            }
+            .content { 
+                padding: 50px 40px; 
+                font-size: 16px; 
+                line-height: 1.8; 
+                color: #4a5568; 
+            }
+            .greeting { 
+                font-size: 18px; 
+                font-weight: 500; 
+                color: #2d3748; 
+                margin-bottom: 25px; 
+            }
+            .section { 
+                margin: 35px 0; 
+            }
+            .section-title { 
+                font-size: 20px; 
+                font-weight: 600; 
+                color: #38a169; 
+                margin-bottom: 15px; 
+                border-left: 4px solid #38a169; 
+                padding-left: 15px; 
+            }
+            .pdf-list { 
+                background: #f0fff4; 
+                border: 1px solid #c6f6d5; 
+                border-radius: 12px; 
+                padding: 25px; 
+                margin: 25px 0; 
+            }
+            .pdf-item { 
+                margin: 15px 0; 
+                padding-left: 20px; 
+                position: relative; 
+            }
+            .pdf-item::before { 
+                content: '📄'; 
+                position: absolute; 
+                left: 0; 
+                top: 0; 
+                font-size: 16px; 
+            }
+            .highlight-box { 
+                background: linear-gradient(135deg, #f0fff4 0%, #e6fffa 100%); 
+                border: 1px solid #9ae6b4; 
+                border-radius: 12px; 
+                padding: 25px; 
+                margin: 25px 0; 
+            }
+            .cta-section { 
+                background: #38a169; 
+                color: white; 
+                padding: 30px; 
+                border-radius: 12px; 
+                margin: 30px 0; 
+                text-align: center; 
+            }
+            .cta-title { 
+                font-size: 20px; 
+                font-weight: 600; 
+                margin-bottom: 15px; 
+            }
+            .cta-link { 
+                display: inline-block; 
+                background: white; 
+                color: #38a169; 
+                padding: 12px 25px; 
+                border-radius: 8px; 
+                text-decoration: none; 
+                font-weight: 600; 
+                margin: 10px 5px; 
+                transition: all 0.3s ease; 
+            }
+            .cta-link:hover { 
+                transform: translateY(-2px); 
+                box-shadow: 0 4px 12px rgba(0,0,0,0.15); 
+            }
+            .footer { 
+                background: #2d3748; 
+                color: white; 
+                text-align: center; 
+                padding: 40px 30px; 
+                font-size: 14px; 
+            }
+            .footer-logo { 
+                font-size: 24px; 
+                font-weight: 700; 
+                margin-bottom: 15px; 
+                letter-spacing: 2px; 
+            }
+            .signature { 
+                margin-top: 30px; 
+                padding-top: 25px; 
+                border-top: 1px solid #e2e8f0; 
+                font-style: italic; 
+                color: #718096; 
+            }
+            .strong { 
+                color: #38a169; 
+                font-weight: 600; 
+            }
+            .link { 
+                color: #38a169; 
+                text-decoration: none; 
+                font-weight: 500; 
+            }
+            .link:hover { 
+                text-decoration: underline; 
+            }
         </style>
     </head>
     <body>
         <div class="container">
             <div class="header">
-                <div class="logo">NBLK</div>
-                <h2 style="margin: 0; font-weight: 300;">Business Diagnostic Report</h2>
+                <div class="logo">NNX1™</div>
+                <div class="subtitle">Small Business Solutions</div>
             </div>
-            <div class="score-section">
-                <div class="score">
-                <div class="performance-level">${getPerformanceLevel(score)} Performance</div>
-                <p style="margin: 15px 0 0 0; color: #666; font-size: 16px;">Prepared for ${name}</p>
-            </div>
-            <div class="pdf-notice">
-                <strong>📄 Professional PDF Report Attached</strong><br>
-                Your detailed diagnostic report with charts, analysis, and strategic recommendations is attached to this email.
-            </div>
+            
             <div class="content">
-                ${content.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br>')}
+                <div class="greeting">Hello ${name},</div>
+                
+                <p>Thank you for signing up to explore <span class="strong">NNX1™ Small Business Solutions</span> — and for being part of this exciting early release. Your time and feedback are incredibly valuable as we continue refining this platform for launch.</p>
+                
+                <div class="section">
+                    <div class="section-title">Your Sample Reports</div>
+                    <div class="pdf-list">
+                        <div class="pdf-item"><strong>Your Sample Report</strong> — Based on the diagnostic module you completed.</div>
+                        <div class="pdf-item"><strong>A Full Sample Report</strong> — What you'll receive once you've completed all modules and created an account.</div>
+                        <div class="pdf-item"><strong>A Comprehensive Benchmark Report</strong> — How your results compare to industry standards and other businesses in your sector.</div>
+                    </div>
+                </div>
+                
+                <div class="highlight-box">
+                    <p><strong>When you sign up, you'll unlock access to your personalized dashboard</strong>, allowing you to track your progress, pick up where you left off, and generate a complete business diagnostic profile. This includes actionable recommendations, industry-aligned benchmarks, and suggested next steps.</p>
+                </div>
+                
+                <div class="section">
+                    <div class="section-title">B2B Partner Network</div>
+                    <p>As a registered user, you're also eligible to join our <span class="strong">B2B Partner Network</span>. If your services align with the needs of another business using NNX1, our recommendation engine may feature your company directly in their results. It's our way of helping small businesses support each other — powered by data, not ads.</p>
+                </div>
+                
+                <div class="cta-section">
+                    <div class="cta-title">Ready to Get Started?</div>
+                    <a href="https://nblk.typeform.com/NBLKForm?typeform-source=nnx1.vercel.app" class="cta-link">Sign Up Here</a>
+                    <a href="https://nblk.typeform.com/to/qUvCLRgr?typeform-source=nnx1.vercel.app" class="cta-link">Share Feedback</a>
+                </div>
+                
+                <div class="signature">
+                    <p>This is just the beginning — and your participation helps us demonstrate the real-world value of NNX1™ to future partners and investors.</p>
+                    <p>Thanks again for being part of this journey,<br>
+                    <strong>The NNX1™ Team at NBLK</strong></p>
+                </div>
             </div>
-            <div class="section">
-              <div class="section-title">B2B Partner</div>
-              <div>
-                This is just the beginning. You’ve taken the first step in a modular toolset designed to help small businesses identify gaps, unlock AI-powered support, and grow with clarity. More diagnostic modules will be released soon — each building toward a full-spectrum profile that provides deeper insights, smarter recommendations, and actionable plans.<br><br>
-                If you'd like to:<br>
-                Be alerted when new modules go live<br>
-                Track your progress toward a complete diagnostic report<br>
-                Or apply to be a B2B partner (and potentially be recommended to other businesses through our network)<br>
-                <span class="b2b-link"><a href="https://nblk.typeform.com/NBLKForm" class="b2b-link">Sign up here</a></span><br><br>
-                This diagnostic tool is powered by the NNX1™<sup>®</sup> Engine — built to put people first, and AI to work for them. We're excited to have you on this journey.<br><br>
-                Thanks for being part of the NBLK community,<br>
-                <strong>The NBLK Team</strong>
-              </div>
-            </div>
+            
             <div class="footer">
                 <div class="footer-logo">NBLK CONSULTING</div>
                 <p style="margin: 10px 0;">442 5th Avenue, #2304, New York, NY 10018</p>
