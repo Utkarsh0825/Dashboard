@@ -91,17 +91,26 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       // Load your original email-report-one-page.pdf
       try {
         const pdf1Path = path.join(publicDir, 'email-report-one-page.pdf');
+        console.log('🔍 Trying to load PDF1 from:', pdf1Path);
         staticPdf1 = fsSync.readFileSync(pdf1Path);
         console.log('✅ Original PDF1 loaded successfully');
         console.log('PDF1 size:', staticPdf1?.length || 0);
       } catch (e) {
         console.log('❌ Failed to load original PDF1:', e instanceof Error ? e.message : 'Unknown error');
+        console.log('🔍 Checking if file exists...');
+        try {
+          const exists = fsSync.existsSync(path.join(publicDir, 'email-report-one-page.pdf'));
+          console.log('📁 File exists:', exists);
+        } catch (checkError) {
+          console.log('❌ Error checking file existence');
+        }
         staticPdf1 = null;
       }
       
       // Load your original full-report-sample-original.pdf
       try {
         const pdf2Path = path.join(publicDir, 'full-report-sample-original.pdf');
+        console.log('🔍 Trying to load PDF2 from:', pdf2Path);
         staticPdf2 = fsSync.readFileSync(pdf2Path);
         console.log('✅ Original PDF2 loaded successfully');
         console.log('PDF2 size:', staticPdf2?.length || 0);
@@ -109,6 +118,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         console.log('❌ Failed to load original PDF2, trying alternative path');
         try {
           const pdf2AltPath = path.join(publicDir, 'full-report-sample.pdf');
+          console.log('🔍 Trying alternative path:', pdf2AltPath);
           staticPdf2 = fsSync.readFileSync(pdf2AltPath);
           console.log('✅ Original PDF2 loaded from alternative path');
           console.log('PDF2 size:', staticPdf2?.length || 0);
