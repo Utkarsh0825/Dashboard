@@ -625,7 +625,7 @@ export default function PartialReport({
         {/* Contact Us Dialog */}
         
         {/* Score Card */}
-        <div className="rounded-lg border border-border p-6 bg-card shadow-lg flex flex-col items-center gap-6">
+        <div className="rounded-lg border-2 border-border p-8 bg-card shadow-xl flex flex-col items-center gap-6">
           {/* Modern Score Progress Bar */}
           <div className="w-full max-w-md flex flex-col items-center relative">
             {/* Floating Score Badge - now tracks progress */}
@@ -785,7 +785,7 @@ export default function PartialReport({
                    })}
                  </div>
                  {/* Level info card */}
-                 <div className="w-full bg-muted/5 border border-border rounded-lg p-4 text-center">
+                 <div className="w-full bg-muted/5 border-2 border-border rounded-lg p-6 shadow-lg text-center">
                    <div className="font-semibold mb-2">{levels[walkthroughStep].label}</div>
                    <div className="text-muted-foreground text-sm p-2">{levels[walkthroughStep].description}</div>
                  </div>
@@ -855,7 +855,7 @@ export default function PartialReport({
         {/* Leaderboard Section */}
         <div className="flex flex-col gap-4">
           <h2 className="text-lg font-semibold mb-0">Leaderboard</h2>
-          <div className="rounded-lg border border-border p-5 bg-muted/5 mt-0">
+          <div className="rounded-lg border-2 border-border p-7 bg-muted/5 mt-0 shadow-lg">
             <div className="overflow-x-auto">
               <table className="min-w-full text-base text-left">
                 <thead>
@@ -902,7 +902,7 @@ export default function PartialReport({
           <h2 className="text-lg pt-4 font-semibold">Insights</h2>
           
           {insights.map((insight, index) => (
-            <div key={index} className="rounded-lg border border-border p-6 bg-muted/5">
+            <div key={index} className="rounded-lg border-2 border-border p-8 bg-muted/5 shadow-lg">
               <div className="flex-1">
                 <h4 className="font-semibold text-base mb-2 text-foreground">
                   {insight.title}
@@ -988,15 +988,15 @@ export default function PartialReport({
         {/* Milestone Tracker Section */}
         <div className="mt-1 z-0">
           <h2 className="text-lg font-semibold pt-4 mb-4 text-left">Track Milestones</h2>
-          <div className="rounded-lg border border-border p-10 bg-muted/5 flex flex-col items-center w-full mx-auto z-0">
+          <div className="rounded-lg border-2 border-border p-4 pl-8 md:p-12 bg-muted/5 flex flex-col items-center w-full mx-auto z-0 shadow-lg">
             {/* Only keep the alternative circle step tracker for milestones */}
             <div className="w-full max-w-3xl mx-auto items-center">
-              <div className="flex items-left w-full">
+              <div className="flex items-left w-full overflow-x-auto">
                 {milestoneSteps.map((step, idx, arr) => {
                   const isLast = idx === arr.length - 1;
                   const isExpanded = expandedStep === idx;
                   return (
-                    <div key={step.label} className="flex-1 flex flex-col">
+                    <div key={step.label} className="flex-1 flex flex-col min-w-0">
                       <div className="flex items-center w-full">
                         {/* Circle */}
                         <div className={`flex items-center justify-center rounded-full border-2 ${step.completed ? 'bg-green-500 border-green-500 text-white' : 'bg-card border-border text-muted-foreground'} w-9 h-9 font-semibold text-base`}>
@@ -1021,19 +1021,19 @@ export default function PartialReport({
                       </div>
                       {/* Label with dropdown chevron */}
                       <button
-                        className={`mt-3 text-sm w-max flex items-center gap-2 focus:outline-none ${step.completed ? 'text-foreground font-semibold' : 'text-muted-foreground font-normal'}`}
+                        className={`mt-3 text-xs md:text-sm w-max flex items-center gap-2 focus:outline-none ${step.completed ? 'text-foreground font-semibold' : 'text-muted-foreground font-normal'}`}
                         onClick={() => setExpandedStep(isExpanded ? null : idx)}
                         aria-expanded={isExpanded}
                         aria-controls={`milestone-desc-${idx}`}
                       >
-                        {step.label}
-                        {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                        <span className="truncate">{step.label}</span>
+                        {isExpanded ? <ChevronUp className="w-4 h-4 flex-shrink-0" /> : <ChevronDown className="w-4 h-4 flex-shrink-0" />}
                       </button>
                       {/* Description dropdown */}
                       <div
                         id={`milestone-desc-${idx}`}
-                        className={`transition-all duration-200 text-sm pr-5 text-muted-foreground ${isExpanded ? 'max-h-32 opacity-100 mt-1' : 'max-h-0 opacity-0 overflow-hidden'}`}
-                        style={{ minWidth: '220px' }}
+                        className={`transition-all duration-200 text-xs md:text-sm pr-2 md:pr-5 text-muted-foreground ${isExpanded ? 'max-h-32 opacity-100 mt-1' : 'max-h-0 opacity-0 overflow-hidden'}`}
+                        style={{ minWidth: 'min(220px, 100%)' }}
                       >
                         {step.description}
                       </div>

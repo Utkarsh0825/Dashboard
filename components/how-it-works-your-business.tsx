@@ -175,7 +175,7 @@ export default function HowItWorksYourBusiness({ onBack, onLogoClick, navigateTo
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.2 }}
-            className="bg-card border border-border rounded-lg p-6 hover:shadow-lg transition-shadow"
+            className="bg-card border-2 border-border rounded-lg p-8 shadow-lg hover:shadow-xl transition-shadow"
           >
             <Target className="w-12 h-12 text-primary mb-4" />
             <h3 className="text-xl font-semibold text-foreground mb-3">1. Personalized Assessment</h3>
@@ -188,7 +188,7 @@ export default function HowItWorksYourBusiness({ onBack, onLogoClick, navigateTo
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.3 }}
-            className="bg-card border border-border rounded-lg p-6 hover:shadow-lg transition-shadow"
+            className="bg-card border-2 border-border rounded-lg p-8 shadow-lg hover:shadow-xl transition-shadow"
           >
             <BarChart3 className="w-12 h-12 text-primary mb-4" />
             <h3 className="text-xl font-semibold text-foreground mb-3">2. Industry Benchmarking</h3>
@@ -201,7 +201,7 @@ export default function HowItWorksYourBusiness({ onBack, onLogoClick, navigateTo
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.4 }}
-            className="bg-card border border-border rounded-lg p-6 hover:shadow-lg transition-shadow"
+            className="bg-card border-2 border-border rounded-lg p-8 shadow-lg hover:shadow-xl transition-shadow"
           >
             <Lightbulb className="w-12 h-12 text-primary mb-4" />
             <h3 className="text-xl font-semibold text-foreground mb-3">3. Actionable Insights</h3>
@@ -214,7 +214,7 @@ export default function HowItWorksYourBusiness({ onBack, onLogoClick, navigateTo
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.5 }}
-            className="bg-card border border-border rounded-lg p-6 hover:shadow-lg transition-shadow"
+            className="bg-card border-2 border-border rounded-lg p-8 shadow-lg hover:shadow-xl transition-shadow"
           >
             <Clock className="w-12 h-12 text-primary mb-4" />
             <h3 className="text-xl font-semibold text-foreground mb-3">4. Ongoing Support</h3>
@@ -227,7 +227,7 @@ export default function HowItWorksYourBusiness({ onBack, onLogoClick, navigateTo
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.6 }}
-            className="bg-card border border-border rounded-lg p-6 hover:shadow-lg transition-shadow"
+            className="bg-card border-2 border-border rounded-lg p-8 shadow-lg hover:shadow-xl transition-shadow"
           >
             <CheckCircle className="w-12 h-12 text-primary mb-4" />
             <h3 className="text-xl font-semibold text-foreground mb-3">5. Measurable Results</h3>
@@ -240,7 +240,7 @@ export default function HowItWorksYourBusiness({ onBack, onLogoClick, navigateTo
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.7 }}
-            className="bg-card border border-border rounded-lg p-6 hover:shadow-lg transition-shadow"
+            className="bg-card border-2 border-border rounded-lg p-8 shadow-lg hover:shadow-xl transition-shadow"
           >
             <Target className="w-12 h-12 text-primary mb-4" />
             <h3 className="text-xl font-semibold text-foreground mb-3">6. Custom Solutions</h3>

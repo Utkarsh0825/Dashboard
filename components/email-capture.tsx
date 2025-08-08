@@ -487,7 +487,7 @@ Phone: (212) 598-3030
       {/* Main Content */}
       <div className="flex flex-col flex-1 items-center justify-start max-w-lg mx-auto gap-6 mt-6">
         {/* Single Form Box */}
-                 <div className="w-full rounded-lg border border-border hover:border-border p-6 bg-card/5 flex flex-col gap-4 relative">
+                 <div className="w-full rounded-lg border-2 border-border hover:border-border p-8 bg-card/5 flex flex-col gap-4 relative shadow-lg">
            <button
              onClick={onBack}
              className="absolute top-4 right-4 p-2 rounded-full hover:bg-muted/50 transition-colors"
@@ -588,7 +588,7 @@ Phone: (212) 598-3030
               <Button
                 type="submit"
               disabled={!fullName.trim() || !fullEmail.trim() || !fullCompany.trim() || !fullIndustry.trim() || !fullZipCode.trim() || isSubmittingFull}
-              className="w-full py-4 text-lg bg-primary text-primary-foreground hover:bg-primary/90 rounded-xl transition-all duration-300 disabled:opacity-50 hover:shadow-lg transform-gpu"
+              className="w-full py-4 text-lg bg-primary text-primary-foreground hover:bg-primary/90 rounded-xl transition-all duration-300 disabled:opacity-50 hover:shadow-xl transform-gpu"
               >
               {isSubmittingFull ? "Sending..." : "Submit"}
           </Button>

@@ -172,7 +172,7 @@ export default function HowItWorksBusiness({ onBack, onLogoClick, navigateToView
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.2 }}
-            className="bg-card border border-border rounded-lg p-6 hover:shadow-lg transition-shadow"
+            className="bg-card border-2 border-border rounded-lg p-8 shadow-lg hover:shadow-xl transition-shadow"
           >
             <Building2 className="w-12 h-12 text-primary mb-4" />
             <h3 className="text-xl font-semibold text-foreground mb-3">Business Intelligence</h3>
@@ -185,7 +185,7 @@ export default function HowItWorksBusiness({ onBack, onLogoClick, navigateToView
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.3 }}
-            className="bg-card border border-border rounded-lg p-6 hover:shadow-lg transition-shadow"
+            className="bg-card border-2 border-border rounded-lg p-8 shadow-lg hover:shadow-xl transition-shadow"
           >
             <Users className="w-12 h-12 text-primary mb-4" />
             <h3 className="text-xl font-semibold text-foreground mb-3">Team Optimization</h3>
@@ -198,7 +198,7 @@ export default function HowItWorksBusiness({ onBack, onLogoClick, navigateToView
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.4 }}
-            className="bg-card border border-border rounded-lg p-6 hover:shadow-lg transition-shadow"
+            className="bg-card border-2 border-border rounded-lg p-8 shadow-lg hover:shadow-xl transition-shadow"
           >
             <TrendingUp className="w-12 h-12 text-primary mb-4" />
             <h3 className="text-xl font-semibold text-foreground mb-3">Growth Strategy</h3>
@@ -211,7 +211,7 @@ export default function HowItWorksBusiness({ onBack, onLogoClick, navigateToView
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.5 }}
-            className="bg-card border border-border rounded-lg p-6 hover:shadow-lg transition-shadow"
+            className="bg-card border-2 border-border rounded-lg p-8 shadow-lg hover:shadow-xl transition-shadow"
           >
             <Shield className="w-12 h-12 text-primary mb-4" />
             <h3 className="text-xl font-semibold text-foreground mb-3">Risk Management</h3>
@@ -224,7 +224,7 @@ export default function HowItWorksBusiness({ onBack, onLogoClick, navigateToView
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.6 }}
-            className="bg-card border border-border rounded-lg p-6 hover:shadow-lg transition-shadow"
+            className="bg-card border-2 border-border rounded-lg p-8 shadow-lg hover:shadow-xl transition-shadow"
           >
             <Zap className="w-12 h-12 text-primary mb-4" />
             <h3 className="text-xl font-semibold text-foreground mb-3">Quick Implementation</h3>
@@ -237,7 +237,7 @@ export default function HowItWorksBusiness({ onBack, onLogoClick, navigateToView
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.7 }}
-            className="bg-card border border-border rounded-lg p-6 hover:shadow-lg transition-shadow"
+            className="bg-card border-2 border-border rounded-lg p-8 shadow-lg hover:shadow-xl transition-shadow"
           >
             <Building2 className="w-12 h-12 text-primary mb-4" />
             <h3 className="text-xl font-semibold text-foreground mb-3">Scalable Solutions</h3>

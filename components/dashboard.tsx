@@ -326,7 +326,7 @@ export default function Dashboard({ onBack, onLogoClick, navigateToView, onDashb
               </div>
               
               {/* Content */}
-              <div className="w-full bg-muted border border-border rounded-lg p-4">
+              <div className="w-full bg-muted border-2 border-border rounded-lg p-6 shadow-lg">
                 <div className="text-muted-foreground text-sm leading-relaxed">{link.content}</div>
               </div>
             </div>

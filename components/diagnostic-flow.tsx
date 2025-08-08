@@ -165,7 +165,7 @@ export default function DiagnosticFlow({ toolName, onComplete, onBack, onLogoCli
           <div className="w-full px-6 max-w-md space-y-4">
             <Button
               variant="outline"
-              className="w-full py-6 rounded-lg transition-all bg-card border border-border hover:border-border hover:shadow-lg"
+              className="w-full py-6 rounded-lg transition-all bg-card border border-border hover:border-border hover:shadow-xl"
               onClick={() => handleAnswer("Yes")}
               disabled={isSaving}
             >
@@ -173,7 +173,7 @@ export default function DiagnosticFlow({ toolName, onComplete, onBack, onLogoCli
             </Button>
             <Button
               variant="outline"
-              className="w-full py-6 rounded-lg transition-all bg-card border border-border hover:border-border hover:shadow-lg"
+              className="w-full py-6 rounded-lg transition-all bg-card border border-border hover:border-border hover:shadow-xl"
               onClick={() => handleAnswer("No")}
               disabled={isSaving}
             >

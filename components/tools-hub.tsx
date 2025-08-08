@@ -367,9 +367,9 @@ export default function ToolsHub({ onToolSelect, onLogoClick, completedTools = [
                           <tool.icon className="w-8 h-8 text-foreground" />
                           <div className="flex-1">
                             <CardTitle className="text-foreground text-base tracking-normal">{tool.name}</CardTitle>
-                            {completedTools.includes(tool.backendName) && completionTimes[tool.backendName] && (
+                            {completedTools.includes(tool.backendName) && (
                               <p className="text-xs text-green-600 dark:text-green-200 mt-1 opacity-80">
-                                completed {getTimeAgo(completionTimes[tool.backendName])}
+                                completed
                               </p>
                       )}
                     </div>
@@ -477,31 +477,31 @@ export default function ToolsHub({ onToolSelect, onLogoClick, completedTools = [
           </p>
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 max-w-6xl mx-auto">
-            <div className="bg-card border border-border rounded-lg p-4 hover:shadow-lg transition-all duration-200">
+            <div className="bg-card border-2 border-border rounded-lg p-6 shadow-lg hover:shadow-xl transition-all duration-200">
               <h3 className="font-semibold text-foreground">Legal & Compliance Readiness</h3>
             </div>
-            <div className="bg-card border border-border rounded-lg p-4 hover:shadow-lg transition-all duration-200">
+            <div className="bg-card border-2 border-border rounded-lg p-6 shadow-lg hover:shadow-xl transition-all duration-200">
               <h3 className="font-semibold text-foreground">Hiring & Onboarding</h3>
             </div>
-            <div className="bg-card border border-border rounded-lg p-4 hover:shadow-lg transition-all duration-200">
+            <div className="bg-card border-2 border-border rounded-lg p-6 shadow-lg hover:shadow-xl transition-all duration-200">
               <h3 className="font-semibold text-foreground">Employee Management</h3>
             </div>
-            <div className="bg-card border border-border rounded-lg p-4 hover:shadow-lg transition-all duration-200">
+            <div className="bg-card border-2 border-border rounded-lg p-6 shadow-lg hover:shadow-xl transition-all duration-200">
               <h3 className="font-semibold text-foreground">Customer Service & Support Systems</h3>
             </div>
-            <div className="bg-card border border-border rounded-lg p-4 hover:shadow-lg transition-all duration-200">
+            <div className="bg-card border-2 border-border rounded-lg p-6 shadow-lg hover:shadow-xl transition-all duration-200">
               <h3 className="font-semibold text-foreground">Sales Strategy & Process</h3>
             </div>
-            <div className="bg-card border border-border rounded-lg p-4 hover:shadow-lg transition-all duration-200">
+            <div className="bg-card border-2 border-border rounded-lg p-6 shadow-lg hover:shadow-xl transition-all duration-200">
               <h3 className="font-semibold text-foreground">AI & Automation Readiness</h3>
             </div>
-            <div className="bg-card border border-border rounded-lg p-4 hover:shadow-lg transition-all duration-200">
+            <div className="bg-card border-2 border-border rounded-lg p-6 shadow-lg hover:shadow-xl transition-all duration-200">
               <h3 className="font-semibold text-foreground">Reputation Management</h3>
             </div>
-            <div className="bg-card border border-border rounded-lg p-4 hover:shadow-lg transition-all duration-200">
+            <div className="bg-card border-2 border-border rounded-lg p-6 shadow-lg hover:shadow-xl transition-all duration-200">
               <h3 className="font-semibold text-foreground">Scaling & Growth Readiness</h3>
             </div>
-            <div className="bg-card border border-border rounded-lg p-4 hover:shadow-lg transition-all duration-200">
+            <div className="bg-card border-2 border-border rounded-lg p-6 shadow-lg hover:shadow-xl transition-all duration-200">
               <h3 className="font-semibold text-foreground">Pricing Strategy & Profitability</h3>
             </div>
           </div>
@@ -556,7 +556,7 @@ export default function ToolsHub({ onToolSelect, onLogoClick, completedTools = [
               </div>
               
               {/* Content */}
-              <div className="w-full bg-muted border border-border rounded-lg p-4 max-h-[70vh] overflow-y-auto">
+              <div className="w-full bg-muted border-2 border-border rounded-lg p-6 shadow-lg max-h-[70vh] overflow-y-auto">
                 <div className="text-muted-foreground text-sm leading-relaxed">
                   {link.id === "privacy-policy" ? (
                     <>
@@ -637,7 +637,7 @@ export default function ToolsHub({ onToolSelect, onLogoClick, completedTools = [
                       
                       <div className="space-y-4">
                         {/* Email Card */}
-                        <div className="bg-card border border-border rounded-lg p-6 flex items-center space-x-4 w-full">
+                        <div className="bg-card border-2 border-border rounded-lg p-8 shadow-lg flex items-center space-x-4 w-full">
                           <div className="bg-muted rounded-full p-3 flex-shrink-0">
                             <Mail className="w-6 h-6 text-foreground" />
                           </div>
@@ -653,7 +653,7 @@ export default function ToolsHub({ onToolSelect, onLogoClick, completedTools = [
                         </div>
                         
                         {/* Phone Card */}
-                        <div className="bg-card border border-border rounded-lg p-6 flex items-center space-x-4 w-full">
+                        <div className="bg-card border-2 border-border rounded-lg p-8 shadow-lg flex items-center space-x-4 w-full">
                           <div className="bg-muted rounded-full p-3 flex-shrink-0">
                             <Phone className="w-6 h-6 text-foreground" />
                           </div>

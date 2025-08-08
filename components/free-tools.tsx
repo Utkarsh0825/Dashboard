@@ -425,7 +425,7 @@ export default function FreeTools({ navigateToView, onDashboard, onExploreTools,
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: categoryIndex * 0.1 }}
-              className="bg-card border border-border rounded-lg p-6 hover:shadow-lg transition-all duration-300"
+              className="bg-card border-2 border-border rounded-lg p-8 shadow-lg hover:shadow-xl transition-all duration-300"
             >
               <div className="flex items-center gap-3 mb-4">
                 <div className="text-primary">
@@ -450,7 +450,7 @@ export default function FreeTools({ navigateToView, onDashboard, onExploreTools,
                       href={tool.url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="block p-3 rounded-lg border border-border hover:border-primary/50 hover:bg-muted/50 transition-all duration-200 group"
+                      className="block p-4 rounded-lg border-2 border-border hover:border-primary/50 hover:bg-muted/50 transition-all duration-200 group shadow-md"
                     >
                       <div className="flex items-start gap-3">
                         <div className="text-muted-foreground group-hover:text-primary transition-colors mt-0.5">

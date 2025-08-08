@@ -197,14 +197,14 @@ export default function PhaseAssessmentModal({ isOpen, onClose, onExploreTools }
                   <div className="space-y-4">
                     <Button
                       variant="outline"
-                      className="w-full py-6 rounded-lg transition-all bg-card border border-border hover:border-border hover:shadow-lg"
+                      className="w-full py-6 rounded-lg transition-all bg-card border border-border hover:border-border hover:shadow-xl"
                       onClick={() => handleAnswer(true)}
                     >
                       Yes
                     </Button>
                     <Button
                       variant="outline"
-                      className="w-full py-6 rounded-lg transition-all bg-card border border-border hover:border-border hover:shadow-lg"
+                      className="w-full py-6 rounded-lg transition-all bg-card border border-border hover:border-border hover:shadow-xl"
                       onClick={() => handleAnswer(false)}
                     >
                       No
