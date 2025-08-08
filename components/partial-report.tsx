@@ -38,16 +38,16 @@ export default function PartialReport({
   const [expandedStep, setExpandedStep] = useState<number | null>(null)
   const [expandedInsights, setExpandedInsights] = useState<{ [key: number]: boolean }>({})
   const [insightDialogOpen, setInsightDialogOpen] = useState<number | null>(null)
-  // Show walkthrough on first visit only
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const seen = localStorage.getItem('toolsHubWalkthroughSeen');
-      if (!seen) {
-        setWalkthroughOpen(true);
-        localStorage.setItem('toolsHubWalkthroughSeen', 'true');
-      }
-    }
-  }, []);
+  // Show walkthrough on first visit only - DISABLED
+  // useEffect(() => {
+  //   if (typeof window !== 'undefined') {
+  //     const seen = localStorage.getItem('toolsHubWalkthroughSeen');
+  //     if (!seen) {
+  //       setWalkthroughOpen(true);
+  //       localStorage.setItem('toolsHubWalkthroughSeen', 'true');
+  //     }
+  //   }
+  // }, []);
 
   // Handle resend cooldown timer
   useEffect(() => {
@@ -506,8 +506,6 @@ export default function PartialReport({
     progressBarColor = 'bg-red-500'
   } else if (score <= 70) {
     progressBarColor = 'bg-yellow-500'
-  } else if (score <= 90) {
-    progressBarColor = 'bg-blue-500'
   } else {
     progressBarColor = 'bg-green-500'
   }

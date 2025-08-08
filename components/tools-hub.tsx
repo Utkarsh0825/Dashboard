@@ -114,6 +114,14 @@ export default function ToolsHub({ onToolSelect, onLogoClick, completedTools = [
     return `${days} days ago`
   }
 
+  const formatCompletionDate = (timestamp: number) => {
+    const date = new Date(timestamp)
+    const month = date.toLocaleDateString('en-US', { month: 'short' })
+    const day = date.getDate()
+    const year = date.getFullYear()
+    return `${month} ${day}, ${year}`
+  }
+
   const toggleExpand = (index: number) => {
     setExpandedIndex(index === expandedIndex ? null : index)
   }
@@ -369,7 +377,7 @@ export default function ToolsHub({ onToolSelect, onLogoClick, completedTools = [
                             <CardTitle className="text-foreground text-base tracking-normal">{tool.name}</CardTitle>
                             {completedTools.includes(tool.backendName) && (
                               <p className="text-xs text-green-600 dark:text-green-200 mt-1 opacity-80">
-                                completed
+                                COMPLETED ON {formatCompletionDate(completionTimes[tool.backendName])}
                               </p>
                       )}
                     </div>
