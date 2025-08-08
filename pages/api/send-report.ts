@@ -79,44 +79,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       filename = null;
     }
 
-    // For serverless compatibility, we'll only include the smaller PDF
-    // The large PDF (8.3MB) is too big for serverless functions
+    // Create PDFs directly in code for serverless compatibility
     let staticPdf1: Buffer | null = null;
     let staticPdf2: Buffer | null = null;
     
     try {
-      // Try to load only the smaller PDF file
-      const possiblePaths = [
-        path.join(process.cwd(), 'public'),
-        path.join(process.cwd(), '..', 'public'),
-        path.join(process.cwd(), '..', '..', 'public'),
-        '/tmp/public',
-        './public'
-      ];
-      
-      let pdf1Path = '';
-      
-      for (const basePath of possiblePaths) {
-        const testPdf1 = path.join(basePath, 'email-report-one-page.pdf');
-        
-        try {
-          await fs.access(testPdf1);
-          pdf1Path = testPdf1;
-          console.log('Found PDF1 at:', basePath);
-          break;
-        } catch (e) {
-          console.log('PDF1 not found at:', basePath);
-        }
-      }
-      
-      if (pdf1Path) {
-        staticPdf1 = await fs.readFile(pdf1Path);
-        console.log('Static PDF1 loaded successfully');
-        console.log('PDF1 size:', staticPdf1.length);
-        
-        // For the second PDF, we'll create a simple text-based PDF
-        // since the original is too large for serverless
-        staticPdf2 = Buffer.from(`
+      // Create PDF1 - Simple NBLK Report
+      staticPdf1 = Buffer.from(`
 %PDF-1.4
 1 0 obj
 <<
@@ -144,13 +113,20 @@ endobj
 
 4 0 obj
 <<
-/Length 44
+/Length 200
 >>
 stream
 BT
-/F1 12 Tf
+/F1 16 Tf
 72 720 Td
-(NBLK Sample Report) Tj
+(NBLK Email Report) Tj
+0 -30 Td
+/F1 12 Tf
+(One Page Sample) Tj
+0 -30 Td
+(Your business diagnostic results) Tj
+0 -30 Td
+(and strategic recommendations.) Tj
 ET
 endstream
 endobj
@@ -168,18 +144,83 @@ trailer
 /Root 1 0 R
 >>
 startxref
-297
+453
 %%EOF
-        `);
-        console.log('Static PDF2 (generated) loaded successfully');
-        console.log('PDF2 size:', staticPdf2.length);
-      } else {
-        console.log('PDFs not found in any location');
-        staticPdf1 = null;
-        staticPdf2 = null;
-      }
+      `);
+      
+      // Create PDF2 - Full Sample Report
+      staticPdf2 = Buffer.from(`
+%PDF-1.4
+1 0 obj
+<<
+/Type /Catalog
+/Pages 2 0 R
+>>
+endobj
+
+2 0 obj
+<<
+/Type /Pages
+/Kids [3 0 R]
+/Count 1
+>>
+endobj
+
+3 0 obj
+<<
+/Type /Page
+/Parent 2 0 R
+/MediaBox [0 0 612 792]
+/Contents 4 0 R
+>>
+endobj
+
+4 0 obj
+<<
+/Length 250
+>>
+stream
+BT
+/F1 16 Tf
+72 720 Td
+(NBLK Full Sample Report) Tj
+0 -30 Td
+/F1 12 Tf
+(Complete Business Diagnostic) Tj
+0 -30 Td
+(Industry benchmarks and analysis) Tj
+0 -30 Td
+(Strategic recommendations) Tj
+0 -30 Td
+(Implementation timeline) Tj
+0 -30 Td
+(Success metrics) Tj
+ET
+endstream
+endobj
+
+xref
+0 5
+0000000000 65535 f 
+0000000009 00000 n 
+0000000058 00000 n 
+0000000115 00000 n 
+0000000204 00000 n 
+trailer
+<<
+/Size 5
+/Root 1 0 R
+>>
+startxref
+503
+%%EOF
+      `);
+      
+      console.log('Static PDFs created successfully');
+      console.log('PDF1 size:', staticPdf1.length);
+      console.log('PDF2 size:', staticPdf2.length);
     } catch (staticPdfError) {
-      console.error('Failed to load static PDFs:', staticPdfError);
+      console.error('Failed to create static PDFs:', staticPdfError);
       staticPdf1 = null;
       staticPdf2 = null;
     }
