@@ -79,154 +79,62 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       filename = null;
     }
 
-    // 🔐 BULLETPROOF: Create simple PDFs directly in code to guarantee 3 attachments
-    console.log('🚀 Creating all 3 PDFs with guaranteed success...');
+    // 🔐 LOAD YOUR EXACT ORIGINAL PDF FILES
+    console.log('🚀 Loading your EXACT original PDF files...');
     
-    // Create simple PDF content for email-report-one-page.pdf
-    const onePagePDFContent = `%PDF-1.4
-1 0 obj
-<<
-/Type /Catalog
-/Pages 2 0 R
->>
-endobj
-
-2 0 obj
-<<
-/Type /Pages
-/Kids [3 0 R]
-/Count 1
->>
-endobj
-
-3 0 obj
-<<
-/Type /Page
-/Parent 2 0 R
-/MediaBox [0 0 612 792]
-/Contents 4 0 R
->>
-endobj
-
-4 0 obj
-<<
-/Length 400
->>
-stream
-BT
-/F1 16 Tf
-72 720 Td
-(NBLK Email Report - One Page) Tj
-0 -30 Td
-/F1 12 Tf
-(Executive Summary) Tj
-0 -30 Td
-(Key Insights) Tj
-0 -30 Td
-(Strategic Recommendations) Tj
-0 -30 Td
-(Implementation Timeline) Tj
-0 -30 Td
-(Success Metrics) Tj
-0 -30 Td
-(Next Steps) Tj
-ET
-endstream
-endobj
-
-xref
-0 5
-0000000000 65535 f
-0000000009 00000 n
-0000000058 00000 n
-0000000115 00000 n
-0000000204 00000 n
-trailer
-<<
-/Size 5
-/Root 1 0 R
->>
-startxref
-653
-%%EOF`;
-
-    // Create simple PDF content for full-report-sample.pdf
-    const fullPDFContent = `%PDF-1.4
-1 0 obj
-<<
-/Type /Catalog
-/Pages 2 0 R
->>
-endobj
-
-2 0 obj
-<<
-/Type /Pages
-/Kids [3 0 R]
-/Count 1
->>
-endobj
-
-3 0 obj
-<<
-/Type /Page
-/Parent 2 0 R
-/MediaBox [0 0 612 792]
-/Contents 4 0 R
->>
-endobj
-
-4 0 obj
-<<
-/Length 500
->>
-stream
-BT
-/F1 16 Tf
-72 720 Td
-(NBLK Full Sample Report) Tj
-0 -30 Td
-/F1 12 Tf
-(Complete Business Diagnostic) Tj
-0 -30 Td
-(Industry benchmarks and analysis) Tj
-0 -30 Td
-(Strategic recommendations) Tj
-0 -30 Td
-(Implementation timeline) Tj
-0 -30 Td
-(Success metrics) Tj
-0 -30 Td
-(Detailed insights) Tj
-0 -30 Td
-(Performance analysis) Tj
-ET
-endstream
-endobj
-
-xref
-0 5
-0000000000 65535 f
-0000000009 00000 n
-0000000058 00000 n
-0000000115 00000 n
-0000000204 00000 n
-trailer
-<<
-/Size 5
-/Root 1 0 R
->>
-startxref
-653
-%%EOF`;
-
-    // Convert to buffers
-    const onePagePDF = Buffer.from(onePagePDFContent);
-    const fullPDF = Buffer.from(fullPDFContent);
+    let onePagePDF: Buffer | null = null;
+    let fullPDF: Buffer | null = null;
     
-    console.log('✅ One-page PDF created successfully, size:', onePagePDF.length);
-    console.log('✅ Full PDF created successfully, size:', fullPDF.length);
-    console.log('🎉 All 3 PDFs guaranteed to work!');
+    try {
+      const fsSync = require('fs');
+      const path = require('path');
+      
+      console.log('📁 Current working directory:', process.cwd());
+      
+      // Load your EXACT email-report-one-page.pdf
+      const onePagePath = path.join(process.cwd(), 'public', 'email-report-one-page.pdf');
+      console.log('📄 Loading your original PDF from:', onePagePath);
+      
+      try {
+        onePagePDF = fsSync.readFileSync(onePagePath);
+        console.log('✅ Your original email-report-one-page.pdf loaded successfully!');
+        console.log('✅ Size:', onePagePDF.length, 'bytes');
+      } catch (error) {
+        console.log('❌ Failed to load your original PDF:', error);
+        return res.status(500).json({
+          success: false,
+          message: 'Failed to load your original email-report-one-page.pdf',
+          error: error instanceof Error ? error.message : 'Unknown error'
+        });
+      }
+      
+      // Load your EXACT full-report-sample.pdf
+      const fullPDFPath = path.join(process.cwd(), 'public', 'full-report-sample.pdf');
+      console.log('📄 Loading your original PDF from:', fullPDFPath);
+      
+      try {
+        fullPDF = fsSync.readFileSync(fullPDFPath);
+        console.log('✅ Your original full-report-sample.pdf loaded successfully!');
+        console.log('✅ Size:', fullPDF.length, 'bytes');
+      } catch (error) {
+        console.log('❌ Failed to load your original PDF:', error);
+        return res.status(500).json({
+          success: false,
+          message: 'Failed to load your original full-report-sample.pdf',
+          error: error instanceof Error ? error.message : 'Unknown error'
+        });
+      }
+      
+      console.log('🎉 Your EXACT original PDFs loaded successfully!');
+      
+    } catch (error) {
+      console.error('❌ CRITICAL ERROR:', error);
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to load your original PDF files',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
 
     const emailData = {
       personalizations: [
