@@ -1,7 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { generatePdfReport, DiagnosticInput } from '../../lib/pdf';
-import fs from 'fs/promises';
-import path from 'path';
+import { createPdfBuffers } from '../../lib/pdf-data';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
@@ -79,48 +78,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       filename = null;
     }
 
-    // 🔐 LOAD STATIC PDFS USING FETCH - WORKS ON BOTH LOCALHOST AND VERCEL
-    console.log('🚀 Loading static PDFs using fetch...');
+    // 🔐 100% RELIABLE: Load static PDFs from embedded base64 data
+    console.log('🚀 Loading static PDFs from embedded base64 data...');
     
-    let staticPdfOne: Buffer | null = null;
-    let staticPdfTwo: Buffer | null = null;
+    const { emailReportOnePage, fullReportSample } = createPdfBuffers();
     
-    try {
-      // Determine domain for fetch requests
-      const domain = req.headers.host?.startsWith('localhost')
-        ? 'http://localhost:3000'
-        : `https://${req.headers.host}`;
-      
-      console.log('🌐 Using domain:', domain);
-      
-      // Fetch static PDFs from public folder
-      console.log('📄 Fetching email-report-one-page.pdf...');
-      const staticPdfOneResponse = await fetch(`${domain}/email-report-one-page.pdf`);
-      
-      if (staticPdfOneResponse.ok) {
-        const bufferOne = await staticPdfOneResponse.arrayBuffer();
-        staticPdfOne = Buffer.from(bufferOne);
-        console.log('✅ email-report-one-page.pdf loaded successfully, size:', staticPdfOne.length);
-      } else {
-        console.log('❌ Failed to fetch email-report-one-page.pdf:', staticPdfOneResponse.status);
-      }
-      
-      console.log('📄 Fetching full-report-sample-original.pdf...');
-      const staticPdfTwoResponse = await fetch(`${domain}/full-report-sample-original.pdf`);
-      
-      if (staticPdfTwoResponse.ok) {
-        const bufferTwo = await staticPdfTwoResponse.arrayBuffer();
-        staticPdfTwo = Buffer.from(bufferTwo);
-        console.log('✅ full-report-sample-original.pdf loaded successfully, size:', staticPdfTwo.length);
-      } else {
-        console.log('❌ Failed to fetch full-report-sample-original.pdf:', staticPdfTwoResponse.status);
-      }
-      
-      console.log('🎉 Static PDF loading completed');
-      
-    } catch (error) {
-      console.error('❌ Error loading static PDFs:', error);
-    }
+    console.log('✅ email-report-one-page.pdf loaded, size:', emailReportOnePage.length);
+    console.log('✅ full-report-sample.pdf loaded, size:', fullReportSample.length);
+    console.log('🎉 All static PDFs loaded successfully!');
 
     const emailData = {
       personalizations: [
@@ -153,19 +118,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           disposition: 'attachment',
         }] : []),
         // Static PDF 1 (email-report-one-page.pdf)
-        ...(staticPdfOne ? [{
-          content: staticPdfOne.toString('base64'),
+        {
+          content: emailReportOnePage.toString('base64'),
           filename: 'email-report-one-page.pdf',
           type: 'application/pdf',
           disposition: 'attachment',
-        }] : []),
-        // Static PDF 2 (full-report-sample-original.pdf)
-        ...(staticPdfTwo ? [{
-          content: staticPdfTwo.toString('base64'),
-          filename: 'full-report-sample-original.pdf',
+        },
+        // Static PDF 2 (full-report-sample.pdf)
+        {
+          content: fullReportSample.toString('base64'),
+          filename: 'full-report-sample.pdf',
           type: 'application/pdf',
           disposition: 'attachment',
-        }] : []),
+        },
       ],
     };
 
@@ -173,8 +138,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     console.log('📊 Final attachment summary:');
     console.log('Total attachments:', emailData.attachments.length);
     console.log('Dynamic PDF included:', !!pdfBuffer);
-    console.log('Static PDF1 included:', !!staticPdfOne);
-    console.log('Static PDF2 included:', !!staticPdfTwo);
+    console.log('Static PDF1 included:', !!emailReportOnePage);
+    console.log('Static PDF2 included:', !!fullReportSample);
 
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 30000);
