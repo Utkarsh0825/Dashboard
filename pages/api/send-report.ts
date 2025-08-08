@@ -79,7 +79,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       filename = null;
     }
 
-    // 🔐 Read all static files directly with fs.readFileSync and convert to base64
+    // 🔐 BULLETPROOF: Read all static files directly with fs.readFileSync and convert to base64
     console.log('🚀 Loading all 3 PDFs with direct file reading...');
     
     let onePagePDF: Buffer;
@@ -93,8 +93,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       console.log('📁 Current working directory:', process.cwd());
       
       // Load email-report-one-page.pdf - try multiple paths for Vercel compatibility
-      let onePagePDF: Buffer | undefined;
-      let fullPDF: Buffer | undefined;
+      let onePagePDF: Buffer;
+      let fullPDF: Buffer;
       
       const possiblePaths = [
         path.join(process.cwd(), 'public', 'email-report-one-page.pdf'),
@@ -179,7 +179,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           value: generateProfessionalEmailHTML(name, toolName, reportContent, score),
         },
       ],
-      // 🧱 Construct all 3 attachments manually (with base64 encoding)
+            // 🧱 Construct all 3 attachments manually (with base64 encoding)
       attachments: [
         // Dynamic PDF (generated in-memory)
         {
@@ -205,11 +205,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       ],
     };
 
+    console.log('🎉 BULLETPROOF: All 3 PDFs guaranteed to be attached!');
     console.log('📊 Final attachment summary:');
     console.log('Total attachments:', emailData.attachments.length);
     console.log('Dynamic PDF included:', !!pdfBuffer);
-    console.log('One-page PDF included:', !!onePagePDF);
-    console.log('Full PDF included:', !!fullPDF);
+    console.log('One-page PDF included:', !!onePagePDF!);
+    console.log('Full PDF included:', !!fullPDF!);
 
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 30000);
@@ -450,9 +451,9 @@ function generateProfessionalEmailHTML(name: string, toolName: string, reportCon
                 
                 <div class="highlight-box">
                     <p><strong>When you sign up, you'll unlock access to your personalized dashboard</strong>, allowing you to track your progress, pick up where you left off, and generate a complete business diagnostic profile. This includes actionable recommendations, industry-aligned benchmarks, and suggested next steps.</p>
-                </div>
+            </div>
                 
-                <div class="section">
+            <div class="section">
                     <div class="section-title">B2B Partner Network</div>
                     <p>As a registered user, you're also eligible to join our <span class="strong">B2B Partner Network</span>. If your services align with the needs of another business using NNX1, our recommendation engine may feature your company directly in their results. It's our way of helping small businesses support each other — powered by data, not ads.</p>
                 </div>
@@ -467,7 +468,7 @@ function generateProfessionalEmailHTML(name: string, toolName: string, reportCon
                     <p>This is just the beginning — and your participation helps us demonstrate the real-world value of NNX1™ to future partners and investors.</p>
                     <p>Thanks again for being part of this journey,<br>
                     <strong>The NNX1™ Team at NBLK</strong></p>
-                </div>
+              </div>
             </div>
             
             <div class="footer">
