@@ -83,10 +83,26 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     let staticPdf1: Buffer | null = null;
     let staticPdf2: Buffer | null = null;
     
+    console.log('🚀 Starting PDF loading process...');
+    console.log('📁 Current working directory:', process.cwd());
+    
     try {
       // Use synchronous file reading for better reliability
       const fsSync = require('fs');
       const publicDir = path.join(process.cwd(), 'public');
+      console.log('📁 Public directory path:', publicDir);
+      
+      // Check if public directory exists
+      try {
+        const publicExists = fsSync.existsSync(publicDir);
+        console.log('📁 Public directory exists:', publicExists);
+        if (publicExists) {
+          const files = fsSync.readdirSync(publicDir);
+          console.log('📁 Files in public directory:', files.filter((f: string) => f.endsWith('.pdf')));
+        }
+      } catch (dirError) {
+        console.log('❌ Error checking public directory:', dirError);
+      }
       
       // Load your original email-report-one-page.pdf
       try {
@@ -182,10 +198,58 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       ],
     };
 
+    console.log('📊 Final attachment summary:');
     console.log('Total attachments:', emailData.attachments.length);
     console.log('Dynamic PDF included:', !!(pdfBuffer && filename));
     console.log('Static PDF1 included:', !!staticPdf1);
     console.log('Static PDF2 included:', !!staticPdf2);
+    
+    // If we're missing PDFs, try alternative approach
+    if (emailData.attachments.length < 3) {
+      console.log('⚠️ Missing PDFs detected, trying alternative approach...');
+      
+      // Try to load PDFs with different approach
+      try {
+        const fs = require('fs');
+        const path = require('path');
+        
+        // Try to load email-report-one-page.pdf with different paths
+        const possiblePaths = [
+          path.join(process.cwd(), 'public', 'email-report-one-page.pdf'),
+          path.join(process.cwd(), '..', 'public', 'email-report-one-page.pdf'),
+          '/var/task/public/email-report-one-page.pdf',
+          './public/email-report-one-page.pdf'
+        ];
+        
+        for (const pdfPath of possiblePaths) {
+          try {
+            console.log('🔍 Trying path:', pdfPath);
+            const pdfBuffer = fs.readFileSync(pdfPath);
+            console.log('✅ Successfully loaded PDF from:', pdfPath);
+            
+            // Add to attachments if not already present
+            const existingAttachment = emailData.attachments.find((att: any) => 
+              att.filename === 'NBLK-Email-Report-One-Page.pdf'
+            );
+            
+            if (!existingAttachment) {
+              emailData.attachments.push({
+                content: pdfBuffer.toString('base64'),
+                filename: 'NBLK-Email-Report-One-Page.pdf',
+                type: 'application/pdf',
+                disposition: 'attachment',
+              });
+              console.log('✅ Added missing PDF1 to attachments');
+            }
+            break;
+          } catch (pathError) {
+            console.log('❌ Failed path:', pdfPath);
+          }
+        }
+      } catch (altError) {
+        console.log('❌ Alternative approach failed:', altError);
+      }
+    }
 
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 30000);
