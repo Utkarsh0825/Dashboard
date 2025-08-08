@@ -78,133 +78,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       filename = null;
     }
 
-    // 🔐 SIMPLE SOLUTION: Create basic PDFs to guarantee 3 attachments work
-    console.log('🚀 Creating basic PDFs to ensure 3 attachments...');
+    // ✅ SOLUTION: Use public URLs instead of base64 attachments for static PDFs
+    console.log('🚀 Using public URLs for static PDFs - more reliable in Gmail!');
     
-    // Create simple PDF content for email-report-one-page.pdf
-    const onePagePDFContent = `%PDF-1.4
-1 0 obj
-<<
-/Type /Catalog
-/Pages 2 0 R
->>
-endobj
-
-2 0 obj
-<<
-/Type /Pages
-/Kids [3 0 R]
-/Count 1
->>
-endobj
-
-3 0 obj
-<<
-/Type /Page
-/Parent 2 0 R
-/MediaBox [0 0 612 792]
-/Contents 4 0 R
->>
-endobj
-
-4 0 obj
-<<
-/Length 200
->>
-stream
-BT
-/F1 16 Tf
-72 720 Td
-(Email Report) Tj
-0 -30 Td
-/F1 12 Tf
-(Your original content) Tj
-ET
-endstream
-endobj
-
-xref
-0 5
-0000000000 65535 f
-0000000009 00000 n
-0000000058 00000 n
-0000000115 00000 n
-0000000204 00000 n
-trailer
-<<
-/Size 5
-/Root 1 0 R
->>
-startxref
-653
-%%EOF`;
-
-    // Create simple PDF content for full-report-sample.pdf
-    const fullPDFContent = `%PDF-1.4
-1 0 obj
-<<
-/Type /Catalog
-/Pages 2 0 R
->>
-endobj
-
-2 0 obj
-<<
-/Type /Pages
-/Kids [3 0 R]
-/Count 1
->>
-endobj
-
-3 0 obj
-<<
-/Type /Page
-/Parent 2 0 R
-/MediaBox [0 0 612 792]
-/Contents 4 0 R
->>
-endobj
-
-4 0 obj
-<<
-/Length 200
->>
-stream
-BT
-/F1 16 Tf
-72 720 Td
-(Full Report) Tj
-0 -30 Td
-/F1 12 Tf
-(Your original content) Tj
-ET
-endstream
-endobj
-
-xref
-0 5
-0000000000 65535 f
-0000000009 00000 n
-0000000058 00000 n
-0000000115 00000 n
-0000000204 00000 n
-trailer
-<<
-/Size 5
-/Root 1 0 R
->>
-startxref
-653
-%%EOF`;
-
-    // Convert to buffers
-    const emailReportOnePage = Buffer.from(onePagePDFContent);
-    const fullReportSample = Buffer.from(fullPDFContent);
+    // Get the domain for public URLs (works in both development and production)
+    const protocol = process.env.NODE_ENV === 'production' ? 'https' : 'http';
+    const host = req.headers.host || 'localhost:3000';
+    const baseUrl = `${protocol}://${host}`;
     
-    console.log('✅ PDFs created successfully');
-    console.log('✅ One-page PDF size:', emailReportOnePage.length);
-    console.log('✅ Full PDF size:', fullReportSample.length);
-    console.log('🎉 All 3 PDFs guaranteed to work!');
+    console.log('✅ Base URL for public files:', baseUrl);
+    console.log('✅ Static PDFs will be served from public folder');
 
     const emailData = {
       personalizations: [
@@ -224,41 +107,27 @@ startxref
       content: [
         {
           type: 'text/html',
-          value: generateProfessionalEmailHTML(name, toolName, reportContent, score),
+          value: generateProfessionalEmailHTML(name, toolName, reportContent, score, baseUrl),
         },
       ],
-            // 🧱 Construct all 3 attachments manually (with base64 encoding)
+      // ✅ Only attach the dynamic PDF, use URLs for static PDFs
       attachments: [
-        // Dynamic PDF (generated in-memory)
+        // Dynamic PDF (generated in-memory) - keep this as attachment
         ...(pdfBuffer ? [{
           content: pdfBuffer.toString('base64'),
           filename: 'NBLK-Diagnostic-Report.pdf',
           type: 'application/pdf',
           disposition: 'attachment',
         }] : []),
-        // Static PDF 1 (email-report-one-page.pdf)
-        {
-          content: emailReportOnePage.toString('base64'),
-          filename: 'email-report-one-page.pdf',
-          type: 'application/pdf',
-          disposition: 'attachment',
-        },
-        // Static PDF 2 (full-report-sample.pdf)
-        {
-          content: fullReportSample.toString('base64'),
-          filename: 'full-report-sample.pdf',
-          type: 'application/pdf',
-          disposition: 'attachment',
-        },
+        // ✅ Removed static PDF attachments - they're now linked in email body
       ],
     };
 
-    console.log('🎉 BULLETPROOF: All 3 PDFs guaranteed to be attached!');
+    console.log('🎉 RELIABLE SOLUTION: Dynamic PDF attached, static PDFs linked!');
     console.log('📊 Final attachment summary:');
     console.log('Total attachments:', emailData.attachments.length);
     console.log('Dynamic PDF included:', !!pdfBuffer);
-    console.log('Static PDF1 included:', !!emailReportOnePage);
-    console.log('Static PDF2 included:', !!fullReportSample);
+    console.log('Static PDFs: Linked via public URLs (more reliable in Gmail)');
 
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 30000);
@@ -286,7 +155,7 @@ startxref
 
     return res.status(200).json({
       success: true,
-      message: 'Email sent successfully with multiple PDF reports',
+      message: 'Email sent successfully with dynamic PDF and linked static reports',
     });
 
   } catch (error) {
@@ -305,7 +174,7 @@ startxref
   }
 }
 
-function generateProfessionalEmailHTML(name: string, toolName: string, reportContent: any, score: number) {
+function generateProfessionalEmailHTML(name: string, toolName: string, reportContent: any, score: number, baseUrl: string) {
   const currentDate = new Date().toLocaleDateString();
   const content = typeof reportContent === 'string' ? reportContent : reportContent.content || '';
 
@@ -397,15 +266,37 @@ function generateProfessionalEmailHTML(name: string, toolName: string, reportCon
             }
             .pdf-item { 
                 margin: 15px 0; 
-                padding-left: 20px; 
-                position: relative; 
+                padding: 15px; 
+                background: white; 
+                border-radius: 8px; 
+                border: 1px solid #e2e8f0; 
+                transition: all 0.3s ease; 
             }
-            .pdf-item::before { 
-                content: '📄'; 
-                position: absolute; 
-                left: 0; 
-                top: 0; 
+            .pdf-item:hover { 
+                transform: translateY(-2px); 
+                box-shadow: 0 4px 12px rgba(0,0,0,0.1); 
+            }
+            .pdf-link { 
+                display: block; 
+                color: #38a169; 
+                text-decoration: none; 
+                font-weight: 600; 
                 font-size: 16px; 
+                margin-bottom: 5px; 
+            }
+            .pdf-link:hover { 
+                color: #2f855a; 
+                text-decoration: underline; 
+            }
+            .pdf-description { 
+                color: #718096; 
+                font-size: 14px; 
+                margin-top: 5px; 
+            }
+            .pdf-icon { 
+                display: inline-block; 
+                margin-right: 10px; 
+                font-size: 18px; 
             }
             .highlight-box { 
                 background: linear-gradient(135deg, #f0fff4 0%, #e6fffa 100%); 
@@ -491,17 +382,29 @@ function generateProfessionalEmailHTML(name: string, toolName: string, reportCon
                 <div class="section">
                     <div class="section-title">Your Sample Reports</div>
                     <div class="pdf-list">
-                        <div class="pdf-item"><strong>Your Sample Report</strong> — Based on the diagnostic module you completed.</div>
-                        <div class="pdf-item"><strong>A Full Sample Report</strong> — What you'll receive once you've completed all modules and created an account.</div>
-                        <div class="pdf-item"><strong>A Comprehensive Benchmark Report</strong> — How your results compare to industry standards and other businesses in your sector.</div>
+                        <div class="pdf-item">
+                            <span class="pdf-icon">📄</span>
+                            <a href="${baseUrl}/email-report-one-page.pdf" class="pdf-link">One-Page Overview Report</a>
+                            <div class="pdf-description">A concise summary of your diagnostic results and key insights</div>
+                        </div>
+                        <div class="pdf-item">
+                            <span class="pdf-icon">📊</span>
+                            <a href="${baseUrl}/full-report-sample.pdf" class="pdf-link">Detailed Sample Report</a>
+                            <div class="pdf-description">A comprehensive example of what you'll receive with full account access</div>
+                        </div>
+                        <div class="pdf-item">
+                            <span class="pdf-icon">📈</span>
+                            <a href="${baseUrl}/NBLK-Diagnostic-Report.pdf" class="pdf-link">Your Personalized Report</a>
+                            <div class="pdf-description">Your custom diagnostic report based on your ${toolName} assessment</div>
+                        </div>
                     </div>
                 </div>
                 
                 <div class="highlight-box">
                     <p><strong>When you sign up, you'll unlock access to your personalized dashboard</strong>, allowing you to track your progress, pick up where you left off, and generate a complete business diagnostic profile. This includes actionable recommendations, industry-aligned benchmarks, and suggested next steps.</p>
-            </div>
+                </div>
                 
-            <div class="section">
+                <div class="section">
                     <div class="section-title">B2B Partner Network</div>
                     <p>As a registered user, you're also eligible to join our <span class="strong">B2B Partner Network</span>. If your services align with the needs of another business using NNX1, our recommendation engine may feature your company directly in their results. It's our way of helping small businesses support each other — powered by data, not ads.</p>
                 </div>
@@ -516,7 +419,7 @@ function generateProfessionalEmailHTML(name: string, toolName: string, reportCon
                     <p>This is just the beginning — and your participation helps us demonstrate the real-world value of NNX1™ to future partners and investors.</p>
                     <p>Thanks again for being part of this journey,<br>
                     <strong>The NNX1™ Team at NBLK</strong></p>
-              </div>
+                </div>
             </div>
             
             <div class="footer">
