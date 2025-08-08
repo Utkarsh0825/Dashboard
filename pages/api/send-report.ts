@@ -11,7 +11,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   try {
     console.log('Incoming /api/send-report request:', req.body);
-    const { to, name, toolName, reportContent, score, answers } = req.body;
+    const { to, name, toolName, reportContent, score, answers, userTimezone } = req.body;
 
     if (!to || !name || !toolName || !reportContent || typeof score !== 'number') {
       return res.status(400).json({
@@ -62,6 +62,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       userScore: score,
       answers: answersArray,
       toolName: toolName,
+      userTimezone: userTimezone || 'America/New_York', // Use user's timezone or default to EST
     };
 
     let pdfBuffer: Buffer | null;
@@ -239,7 +240,7 @@ function generateProfessionalEmailHTML(name: string, toolName: string, reportCon
                 margin-bottom: 20px; 
             }
             .header { 
-                background: linear-gradient(135deg, #1a202c 0%, #2d3748 100%); 
+                background: #000000; 
                 color: white; 
                 text-align: center; 
                 padding: 50px 30px; 
@@ -345,7 +346,7 @@ function generateProfessionalEmailHTML(name: string, toolName: string, reportCon
                 box-shadow: 0 4px 12px rgba(0,0,0,0.15); 
             }
             .footer { 
-                background: #2d3748; 
+                background: #000000; 
                 color: white; 
                 text-align: center; 
                 padding: 40px 30px; 

@@ -12,13 +12,32 @@ export interface DiagnosticInput {
   userScore: number;
   answers: { question: string; short: string; answer: string }[];
   toolName?: string;
+  userTimezone?: string;
 }
 
 export async function generatePdfReport(input: DiagnosticInput): Promise<Buffer> {
   try {
     const now = new Date();
-    const date = now.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
-    const time = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+    const userTimezone = input.userTimezone || 'America/New_York'; // Default to EST if not provided
+    const date = now.toLocaleDateString('en-US', { 
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric',
+      timeZone: userTimezone 
+    });
+    const time = now.toLocaleTimeString('en-US', { 
+      hour: '2-digit', 
+      minute: '2-digit',
+      timeZone: userTimezone 
+    });
+    
+    // Get timezone abbreviation
+    const timezoneAbbr = new Intl.DateTimeFormat('en-US', {
+      timeZoneName: 'short',
+      timeZone: userTimezone
+    }).formatToParts(now).find(part => part.type === 'timeZoneName')?.value || '';
+    
+    const timeWithZone = `${time} ${timezoneAbbr}`;
     const toolName = input.toolName || 'NBLK Diagnostic';
     const userAnswers = input.answers.map(a => a.answer === 'Yes' ? 100 : 0); // Yes=100, No=0 for bar chart
     const userName = input.companyName || '';
@@ -104,6 +123,7 @@ export async function generatePdfReport(input: DiagnosticInput): Promise<Buffer>
       toolName,
       date,
       time,
+      timeWithZone,
       userName,
       summary,
       questionLabels,

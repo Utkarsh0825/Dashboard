@@ -2,12 +2,12 @@ import { type NextRequest, NextResponse } from "next/server"
 
 export async function POST(request: NextRequest) {
   try {
-    const { toolName, score, answers, name } = await request.json()
+    const { toolName, score, answers, name, userTimezone } = await request.json()
 
     if (!process.env.OPENAI_API_KEY) {
       console.log("🔄 OpenAI API key not found - using intelligent fallback")
       const fallbackInsights = generateDynamicInsights(answers, toolName, score);
-      const fallbackContent = generateIntelligentReport(toolName, score, answers, name);
+      const fallbackContent = generateIntelligentReport(toolName, score, answers, name, userTimezone);
       return NextResponse.json({
         success: true,
         insights: fallbackInsights,
@@ -89,7 +89,7 @@ Avoid emojis, icons, or question marks. Use direct, friendly tone.`.trim();
       console.error(`❌ OpenAI API error: ${response.status}`)
       console.log("🔄 Falling back to intelligent templates...");
       const fallbackInsights = generateStructuredFallback(answers, toolName);
-      const fallbackContent = generateIntelligentReport(toolName, score, answers, name);
+      const fallbackContent = generateIntelligentReport(toolName, score, answers, name, userTimezone);
       return NextResponse.json({
         success: true,
         insights: fallbackInsights,
@@ -167,10 +167,15 @@ Avoid emojis, icons, or question marks. Use direct, friendly tone.`.trim();
   }
 }
 
-function generateIntelligentReport(toolName: string, score: number, answers: any[], name: string) {
+function generateIntelligentReport(toolName: string, score: number, answers: any[], name: string, userTimezone?: string) {
   const noAnswers = answers?.filter((a) => a.answer === "No") || []
   const yesAnswers = answers?.filter((a) => a.answer === "Yes") || []
-  const currentDate = new Date().toLocaleDateString()
+  const currentDate = new Date().toLocaleDateString('en-US', { 
+    year: 'numeric', 
+    month: 'long', 
+    day: 'numeric',
+    timeZone: userTimezone || 'America/New_York'
+  })
 
   const executiveSummary = generateExecutiveSummary(toolName, score, noAnswers.length, yesAnswers.length)
   const keyInsights = generateKeyInsights(toolName, noAnswers)
