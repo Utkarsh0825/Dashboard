@@ -79,44 +79,52 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       filename = null;
     }
 
-    // Read static PDF files
+    // Read static PDF files - using absolute path for serverless compatibility
     let staticPdf1: Buffer | null = null;
     let staticPdf2: Buffer | null = null;
     
     try {
-      const publicDir = path.join(process.cwd(), 'public');
-      console.log('Public directory path:', publicDir);
+      // Try multiple possible paths for serverless environment
+      const possiblePaths = [
+        path.join(process.cwd(), 'public'),
+        path.join(process.cwd(), '..', 'public'),
+        path.join(process.cwd(), '..', '..', 'public'),
+        '/tmp/public',
+        './public'
+      ];
       
-      const pdf1Path = path.join(publicDir, 'email-report-one-page.pdf');
-      const pdf2Path = path.join(publicDir, 'full-report-sample.pdf');
+      let pdf1Path = '';
+      let pdf2Path = '';
       
-      console.log('PDF1 path:', pdf1Path);
-      console.log('PDF2 path:', pdf2Path);
-      
-      // Check if files exist
-      try {
-        await fs.access(pdf1Path);
-        console.log('PDF1 exists');
-      } catch (e) {
-        console.log('PDF1 does not exist');
+      for (const basePath of possiblePaths) {
+        const testPdf1 = path.join(basePath, 'email-report-one-page.pdf');
+        const testPdf2 = path.join(basePath, 'full-report-sample.pdf');
+        
+        try {
+          await fs.access(testPdf1);
+          await fs.access(testPdf2);
+          pdf1Path = testPdf1;
+          pdf2Path = testPdf2;
+          console.log('Found PDFs at:', basePath);
+          break;
+        } catch (e) {
+          console.log('PDFs not found at:', basePath);
+        }
       }
       
-      try {
-        await fs.access(pdf2Path);
-        console.log('PDF2 exists');
-      } catch (e) {
-        console.log('PDF2 does not exist');
+      if (pdf1Path && pdf2Path) {
+        staticPdf1 = await fs.readFile(pdf1Path);
+        staticPdf2 = await fs.readFile(pdf2Path);
+        console.log('Static PDFs loaded successfully');
+        console.log('PDF1 size:', staticPdf1.length);
+        console.log('PDF2 size:', staticPdf2.length);
+      } else {
+        console.log('PDFs not found in any location');
+        staticPdf1 = null;
+        staticPdf2 = null;
       }
-      
-      staticPdf1 = await fs.readFile(pdf1Path);
-      staticPdf2 = await fs.readFile(pdf2Path);
-      
-      console.log('Static PDFs loaded successfully');
-      console.log('PDF1 size:', staticPdf1.length);
-      console.log('PDF2 size:', staticPdf2.length);
     } catch (staticPdfError) {
       console.error('Failed to load static PDFs:', staticPdfError);
-      // Continue without static PDFs
       staticPdf1 = null;
       staticPdf2 = null;
     }
