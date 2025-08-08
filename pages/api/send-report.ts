@@ -79,76 +79,36 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       filename = null;
     }
 
-    // Load your EXACT original PDF files using synchronous reading
-    let staticPdf1: Buffer | null = null;
-    let staticPdf2: Buffer | null = null;
+    // 🔐 Read all static files directly with fs.readFileSync and convert to base64
+    console.log('🚀 Loading all 3 PDFs with direct file reading...');
     
-    console.log('🚀 Starting PDF loading process...');
-    console.log('📁 Current working directory:', process.cwd());
+    let onePagePDF: Buffer;
+    let fullPDF: Buffer;
     
     try {
-      // Use synchronous file reading for better reliability
+      // Ensure reliable absolute paths to static files
       const fsSync = require('fs');
-      const publicDir = path.join(process.cwd(), 'public');
-      console.log('📁 Public directory path:', publicDir);
+      const path = require('path');
       
-      // Check if public directory exists
-      try {
-        const publicExists = fsSync.existsSync(publicDir);
-        console.log('📁 Public directory exists:', publicExists);
-        if (publicExists) {
-          const files = fsSync.readdirSync(publicDir);
-          console.log('📁 Files in public directory:', files.filter((f: string) => f.endsWith('.pdf')));
-        }
-      } catch (dirError) {
-        console.log('❌ Error checking public directory:', dirError);
-      }
+      console.log('📁 Current working directory:', process.cwd());
       
-      // Load your original email-report-one-page.pdf
-      try {
-        const pdf1Path = path.join(publicDir, 'email-report-one-page.pdf');
-        console.log('🔍 Trying to load PDF1 from:', pdf1Path);
-        staticPdf1 = fsSync.readFileSync(pdf1Path);
-        console.log('✅ Original PDF1 loaded successfully');
-        console.log('PDF1 size:', staticPdf1?.length || 0);
-      } catch (e) {
-        console.log('❌ Failed to load original PDF1:', e instanceof Error ? e.message : 'Unknown error');
-        console.log('🔍 Checking if file exists...');
-        try {
-          const exists = fsSync.existsSync(path.join(publicDir, 'email-report-one-page.pdf'));
-          console.log('📁 File exists:', exists);
-        } catch (checkError) {
-          console.log('❌ Error checking file existence');
-        }
-        staticPdf1 = null;
-      }
+      // Load email-report-one-page.pdf
+      const onePagePath = path.join(process.cwd(), 'public', 'email-report-one-page.pdf');
+      console.log('📄 Loading one-page PDF from:', onePagePath);
+      onePagePDF = fsSync.readFileSync(onePagePath);
+      console.log('✅ One-page PDF loaded successfully, size:', onePagePDF.length);
       
-      // Load your original full-report-sample-original.pdf
-      try {
-        const pdf2Path = path.join(publicDir, 'full-report-sample-original.pdf');
-        console.log('🔍 Trying to load PDF2 from:', pdf2Path);
-        staticPdf2 = fsSync.readFileSync(pdf2Path);
-        console.log('✅ Original PDF2 loaded successfully');
-        console.log('PDF2 size:', staticPdf2?.length || 0);
-      } catch (e) {
-        console.log('❌ Failed to load original PDF2, trying alternative path');
-        try {
-          const pdf2AltPath = path.join(publicDir, 'full-report-sample.pdf');
-          console.log('🔍 Trying alternative path:', pdf2AltPath);
-          staticPdf2 = fsSync.readFileSync(pdf2AltPath);
-          console.log('✅ Original PDF2 loaded from alternative path');
-          console.log('PDF2 size:', staticPdf2?.length || 0);
-        } catch (e2) {
-          console.log('❌ Failed to load original PDF2 from both paths:', e2 instanceof Error ? e2.message : 'Unknown error');
-          staticPdf2 = null;
-        }
-      }
+      // Load full-report-sample-original.pdf
+      const fullPDFPath = path.join(process.cwd(), 'public', 'full-report-sample-original.pdf');
+      console.log('📄 Loading full PDF from:', fullPDFPath);
+      fullPDF = fsSync.readFileSync(fullPDFPath);
+      console.log('✅ Full PDF loaded successfully, size:', fullPDF.length);
       
-      console.log('📄 PDF loading completed');
-    } catch (staticPdfError) {
-      console.error('❌ Failed to process PDFs:', staticPdfError);
-      staticPdf1 = null;
-      staticPdf2 = null;
+      console.log('🎉 All static PDFs loaded successfully!');
+      
+    } catch (pdfError) {
+      console.error('❌ CRITICAL ERROR: Failed to load static PDFs:', pdfError);
+      throw new Error(`Failed to load required PDF files: ${pdfError instanceof Error ? pdfError.message : 'Unknown error'}`);
     }
 
     const emailData = {
@@ -172,84 +132,37 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           value: generateProfessionalEmailHTML(name, toolName, reportContent, score),
         },
       ],
-      // Include all PDF attachments
+      // 🧱 Construct all 3 attachments manually (with base64 encoding)
       attachments: [
-        // Dynamic PDF (if generation succeeded)
-        ...(pdfBuffer && filename ? [{
-          content: pdfBuffer.toString('base64'),
-          filename,
+        // Dynamic PDF (generated in-memory)
+        {
+          content: pdfBuffer!.toString('base64'),
+          filename: 'NBLK-Diagnostic-Report.pdf',
           type: 'application/pdf',
           disposition: 'attachment',
-        }] : []),
-        // Static PDF 1
-        ...(staticPdf1 ? [{
-          content: staticPdf1.toString('base64'),
+        },
+        // Static PDF 1 (email-report-one-page.pdf)
+        {
+          content: onePagePDF.toString('base64'),
           filename: 'NBLK-Email-Report-One-Page.pdf',
           type: 'application/pdf',
           disposition: 'attachment',
-        }] : []),
-        // Static PDF 2
-        ...(staticPdf2 ? [{
-          content: staticPdf2.toString('base64'),
+        },
+        // Static PDF 2 (full-report-sample-original.pdf)
+        {
+          content: fullPDF.toString('base64'),
           filename: 'NBLK-Full-Report-Sample.pdf',
           type: 'application/pdf',
           disposition: 'attachment',
-        }] : []),
+        },
       ],
     };
 
     console.log('📊 Final attachment summary:');
     console.log('Total attachments:', emailData.attachments.length);
-    console.log('Dynamic PDF included:', !!(pdfBuffer && filename));
-    console.log('Static PDF1 included:', !!staticPdf1);
-    console.log('Static PDF2 included:', !!staticPdf2);
-    
-    // If we're missing PDFs, try alternative approach
-    if (emailData.attachments.length < 3) {
-      console.log('⚠️ Missing PDFs detected, trying alternative approach...');
-      
-      // Try to load PDFs with different approach
-      try {
-        const fs = require('fs');
-        const path = require('path');
-        
-        // Try to load email-report-one-page.pdf with different paths
-        const possiblePaths = [
-          path.join(process.cwd(), 'public', 'email-report-one-page.pdf'),
-          path.join(process.cwd(), '..', 'public', 'email-report-one-page.pdf'),
-          '/var/task/public/email-report-one-page.pdf',
-          './public/email-report-one-page.pdf'
-        ];
-        
-        for (const pdfPath of possiblePaths) {
-          try {
-            console.log('🔍 Trying path:', pdfPath);
-            const pdfBuffer = fs.readFileSync(pdfPath);
-            console.log('✅ Successfully loaded PDF from:', pdfPath);
-            
-            // Add to attachments if not already present
-            const existingAttachment = emailData.attachments.find((att: any) => 
-              att.filename === 'NBLK-Email-Report-One-Page.pdf'
-            );
-            
-            if (!existingAttachment) {
-              emailData.attachments.push({
-                content: pdfBuffer.toString('base64'),
-                filename: 'NBLK-Email-Report-One-Page.pdf',
-                type: 'application/pdf',
-                disposition: 'attachment',
-              });
-              console.log('✅ Added missing PDF1 to attachments');
-            }
-            break;
-          } catch (pathError) {
-            console.log('❌ Failed path:', pdfPath);
-          }
-        }
-      } catch (altError) {
-        console.log('❌ Alternative approach failed:', altError);
-      }
-    }
+    console.log('Dynamic PDF included:', !!pdfBuffer);
+    console.log('One-page PDF included:', !!onePagePDF);
+    console.log('Full PDF included:', !!fullPDF);
 
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 30000);
