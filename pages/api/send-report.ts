@@ -1,6 +1,8 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { generatePdfReport, DiagnosticInput } from '../../lib/pdf';
 import { createPdfBuffers } from '../../lib/pdf-data';
+import fs from 'fs';
+import path from 'path';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
@@ -78,16 +80,33 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       filename = null;
     }
 
-    // ✅ SOLUTION: Use public URLs instead of base64 attachments for static PDFs
-    console.log('🚀 Using public URLs for static PDFs - more reliable in Gmail!');
+    // ✅ SOLUTION: Read static PDFs from lib/assets using fs.readFileSync()
+    console.log('🚀 Reading static PDFs from lib/assets for reliable attachments...');
     
-    // Get the domain for public URLs (works in both development and production)
-    const protocol = process.env.NODE_ENV === 'production' ? 'https' : 'http';
-    const host = req.headers.host || 'localhost:3000';
-    const baseUrl = `${protocol}://${host}`;
+    let onePagePDFBuffer: Buffer | null = null;
+    let fullReportPDFBuffer: Buffer | null = null;
     
-    console.log('✅ Base URL for public files:', baseUrl);
-    console.log('✅ Static PDFs will be served from public folder');
+    try {
+      // Read static PDFs from lib/assets (works in both local and Vercel)
+      const onePagePDFPath = path.join(process.cwd(), 'lib/assets/email-report-one-page.pdf');
+      const fullReportPDFPath = path.join(process.cwd(), 'lib/assets/full-report-sample.pdf');
+      
+      console.log('📁 Reading from:', onePagePDFPath);
+      console.log('📁 Reading from:', fullReportPDFPath);
+      
+      onePagePDFBuffer = fs.readFileSync(onePagePDFPath);
+      fullReportPDFBuffer = fs.readFileSync(fullReportPDFPath);
+      
+      console.log('✅ Static PDFs read successfully');
+      console.log('✅ One-page PDF size:', onePagePDFBuffer.length);
+      console.log('✅ Full report PDF size:', fullReportPDFBuffer.length);
+      
+    } catch (fsError) {
+      console.error('❌ Failed to read static PDFs:', fsError);
+      // Continue without static PDFs if they can't be read
+      onePagePDFBuffer = null;
+      fullReportPDFBuffer = null;
+    }
 
     const emailData = {
       personalizations: [
@@ -107,27 +126,41 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       content: [
         {
           type: 'text/html',
-          value: generateProfessionalEmailHTML(name, toolName, reportContent, score, baseUrl),
+          value: generateProfessionalEmailHTML(name, toolName, reportContent, score),
         },
       ],
-      // ✅ Only attach the dynamic PDF, use URLs for static PDFs
+      // ✅ Attach all 3 PDFs as proper email attachments
       attachments: [
-        // Dynamic PDF (generated in-memory) - keep this as attachment
+        // Dynamic PDF (generated in-memory)
         ...(pdfBuffer ? [{
           content: pdfBuffer.toString('base64'),
           filename: 'NBLK-Diagnostic-Report.pdf',
           type: 'application/pdf',
           disposition: 'attachment',
         }] : []),
-        // ✅ Removed static PDF attachments - they're now linked in email body
+        // Static PDF 1 (read from lib/assets)
+        ...(onePagePDFBuffer ? [{
+          content: onePagePDFBuffer.toString('base64'),
+          filename: 'email-report-one-page.pdf',
+          type: 'application/pdf',
+          disposition: 'attachment',
+        }] : []),
+        // Static PDF 2 (read from lib/assets)
+        ...(fullReportPDFBuffer ? [{
+          content: fullReportPDFBuffer.toString('base64'),
+          filename: 'full-report-sample.pdf',
+          type: 'application/pdf',
+          disposition: 'attachment',
+        }] : []),
       ],
     };
 
-    console.log('🎉 RELIABLE SOLUTION: Dynamic PDF attached, static PDFs linked!');
+    console.log('🎉 RELIABLE SOLUTION: All PDFs attached as proper email attachments!');
     console.log('📊 Final attachment summary:');
     console.log('Total attachments:', emailData.attachments.length);
     console.log('Dynamic PDF included:', !!pdfBuffer);
-    console.log('Static PDFs: Linked via public URLs (more reliable in Gmail)');
+    console.log('Static PDF1 included:', !!onePagePDFBuffer);
+    console.log('Static PDF2 included:', !!fullReportPDFBuffer);
 
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 30000);
@@ -155,7 +188,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     return res.status(200).json({
       success: true,
-      message: 'Email sent successfully with dynamic PDF and linked static reports',
+      message: 'Email sent successfully with all PDF reports attached',
     });
 
   } catch (error) {
@@ -174,7 +207,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 }
 
-function generateProfessionalEmailHTML(name: string, toolName: string, reportContent: any, score: number, baseUrl: string) {
+function generateProfessionalEmailHTML(name: string, toolName: string, reportContent: any, score: number) {
   const currentDate = new Date().toLocaleDateString();
   const content = typeof reportContent === 'string' ? reportContent : reportContent.content || '';
 
@@ -266,37 +299,15 @@ function generateProfessionalEmailHTML(name: string, toolName: string, reportCon
             }
             .pdf-item { 
                 margin: 15px 0; 
-                padding: 15px; 
-                background: white; 
-                border-radius: 8px; 
-                border: 1px solid #e2e8f0; 
-                transition: all 0.3s ease; 
+                padding-left: 20px; 
+                position: relative; 
             }
-            .pdf-item:hover { 
-                transform: translateY(-2px); 
-                box-shadow: 0 4px 12px rgba(0,0,0,0.1); 
-            }
-            .pdf-link { 
-                display: block; 
-                color: #38a169; 
-                text-decoration: none; 
-                font-weight: 600; 
+            .pdf-item::before { 
+                content: '📄'; 
+                position: absolute; 
+                left: 0; 
+                top: 0; 
                 font-size: 16px; 
-                margin-bottom: 5px; 
-            }
-            .pdf-link:hover { 
-                color: #2f855a; 
-                text-decoration: underline; 
-            }
-            .pdf-description { 
-                color: #718096; 
-                font-size: 14px; 
-                margin-top: 5px; 
-            }
-            .pdf-icon { 
-                display: inline-block; 
-                margin-right: 10px; 
-                font-size: 18px; 
             }
             .highlight-box { 
                 background: linear-gradient(135deg, #f0fff4 0%, #e6fffa 100%); 
@@ -382,21 +393,9 @@ function generateProfessionalEmailHTML(name: string, toolName: string, reportCon
                 <div class="section">
                     <div class="section-title">Your Sample Reports</div>
                     <div class="pdf-list">
-                        <div class="pdf-item">
-                            <span class="pdf-icon">📄</span>
-                            <a href="${baseUrl}/email-report-one-page.pdf" class="pdf-link">One-Page Overview Report</a>
-                            <div class="pdf-description">A concise summary of your diagnostic results and key insights</div>
-                        </div>
-                        <div class="pdf-item">
-                            <span class="pdf-icon">📊</span>
-                            <a href="${baseUrl}/full-report-sample.pdf" class="pdf-link">Detailed Sample Report</a>
-                            <div class="pdf-description">A comprehensive example of what you'll receive with full account access</div>
-                        </div>
-                        <div class="pdf-item">
-                            <span class="pdf-icon">📈</span>
-                            <a href="${baseUrl}/NBLK-Diagnostic-Report.pdf" class="pdf-link">Your Personalized Report</a>
-                            <div class="pdf-description">Your custom diagnostic report based on your ${toolName} assessment</div>
-                        </div>
+                        <div class="pdf-item"><strong>Your Sample Report</strong> — Based on the diagnostic module you completed.</div>
+                        <div class="pdf-item"><strong>A Full Sample Report</strong> — What you'll receive once you've completed all modules and created an account.</div>
+                        <div class="pdf-item"><strong>A Comprehensive Benchmark Report</strong> — How your results compare to industry standards and other businesses in your sector.</div>
                     </div>
                 </div>
                 
