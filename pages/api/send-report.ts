@@ -93,8 +93,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       console.log('📁 Current working directory:', process.cwd());
       
       // Load email-report-one-page.pdf - try multiple paths for Vercel compatibility
-      let onePagePDF: Buffer;
-      let fullPDF: Buffer;
+      let onePagePDF: Buffer | null = null;
+      let fullPDF: Buffer | null = null;
       
       const possiblePaths = [
         path.join(process.cwd(), 'public', 'email-report-one-page.pdf'),
@@ -151,11 +151,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         throw new Error('Failed to load full-report-sample-original.pdf from any path');
       }
       
+      // Ensure variables are assigned (TypeScript safety)
+      if (!onePagePDF || !fullPDF) {
+        throw new Error('PDF variables not properly assigned');
+      }
+      
       console.log('🎉 All static PDFs loaded successfully!');
       
     } catch (pdfError) {
       console.error('❌ CRITICAL ERROR: Failed to load static PDFs:', pdfError);
-      throw new Error(`Failed to load required PDF files: ${pdfError instanceof Error ? pdfError.message : 'Unknown error'}`);
+      // Instead of throwing, return an error response
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to load required PDF files',
+        error: pdfError instanceof Error ? pdfError.message : 'Unknown error'
+      });
     }
 
     const emailData = {
@@ -182,26 +192,26 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             // 🧱 Construct all 3 attachments manually (with base64 encoding)
       attachments: [
         // Dynamic PDF (generated in-memory)
-        {
-          content: pdfBuffer!.toString('base64'),
+        ...(pdfBuffer ? [{
+          content: pdfBuffer.toString('base64'),
           filename: 'NBLK-Diagnostic-Report.pdf',
           type: 'application/pdf',
           disposition: 'attachment',
-        },
+        }] : []),
         // Static PDF 1 (email-report-one-page.pdf)
-        {
-          content: onePagePDF!.toString('base64'),
+        ...(onePagePDF ? [{
+          content: onePagePDF.toString('base64'),
           filename: 'NBLK-Email-Report-One-Page.pdf',
           type: 'application/pdf',
           disposition: 'attachment',
-        },
+        }] : []),
         // Static PDF 2 (full-report-sample-original.pdf)
-        {
-          content: fullPDF!.toString('base64'),
+        ...(fullPDF ? [{
+          content: fullPDF.toString('base64'),
           filename: 'NBLK-Full-Report-Sample.pdf',
           type: 'application/pdf',
           disposition: 'attachment',
-        },
+        }] : []),
       ],
     };
 
@@ -209,8 +219,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     console.log('📊 Final attachment summary:');
     console.log('Total attachments:', emailData.attachments.length);
     console.log('Dynamic PDF included:', !!pdfBuffer);
-    console.log('One-page PDF included:', !!onePagePDF!);
-    console.log('Full PDF included:', !!fullPDF!);
+    console.log('One-page PDF included:', !!onePagePDF);
+    console.log('Full PDF included:', !!fullPDF);
 
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 30000);

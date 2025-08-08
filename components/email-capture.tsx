@@ -257,14 +257,19 @@ Phone: (212) 598-3030
       })
 
       if (response.ok) {
+        const responseData = await response.json()
+        console.log('✅ Email sent successfully:', responseData)
         setShowSuccessModal(true)
       } else {
-        console.error('Failed to send email')
+        const errorData = await response.text()
+        console.error('❌ Failed to send email:', errorData)
+        alert('Failed to send email. Please try again.')
       }
     } catch (error) {
-      console.error('Error sending email:', error)
+      console.error('❌ Error sending email:', error)
+      alert('Network error. Please check your connection and try again.')
     } finally {
-    setIsSubmittingFull(false)
+      setIsSubmittingFull(false)
     }
   }
 
