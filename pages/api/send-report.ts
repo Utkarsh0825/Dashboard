@@ -92,17 +92,64 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       
       console.log('📁 Current working directory:', process.cwd());
       
-      // Load email-report-one-page.pdf
-      const onePagePath = path.join(process.cwd(), 'public', 'email-report-one-page.pdf');
-      console.log('📄 Loading one-page PDF from:', onePagePath);
-      onePagePDF = fsSync.readFileSync(onePagePath);
-      console.log('✅ One-page PDF loaded successfully, size:', onePagePDF.length);
+      // Load email-report-one-page.pdf - try multiple paths for Vercel compatibility
+      let onePagePDF: Buffer | undefined;
+      let fullPDF: Buffer | undefined;
       
-      // Load full-report-sample-original.pdf
-      const fullPDFPath = path.join(process.cwd(), 'public', 'full-report-sample-original.pdf');
-      console.log('📄 Loading full PDF from:', fullPDFPath);
-      fullPDF = fsSync.readFileSync(fullPDFPath);
-      console.log('✅ Full PDF loaded successfully, size:', fullPDF.length);
+      const possiblePaths = [
+        path.join(process.cwd(), 'public', 'email-report-one-page.pdf'),
+        path.join(process.cwd(), '..', 'public', 'email-report-one-page.pdf'),
+        '/var/task/public/email-report-one-page.pdf',
+        './public/email-report-one-page.pdf',
+        path.join(__dirname, '..', '..', 'public', 'email-report-one-page.pdf')
+      ];
+      
+      // Try to load one-page PDF
+      let onePageLoaded = false;
+      for (const pdfPath of possiblePaths) {
+        try {
+          console.log('📄 Trying to load one-page PDF from:', pdfPath);
+          onePagePDF = fsSync.readFileSync(pdfPath);
+          console.log('✅ One-page PDF loaded successfully from:', pdfPath);
+          console.log('✅ One-page PDF size:', onePagePDF.length);
+          onePageLoaded = true;
+          break;
+        } catch (pathError) {
+          console.log('❌ Failed path:', pdfPath);
+        }
+      }
+      
+      if (!onePageLoaded) {
+        throw new Error('Failed to load email-report-one-page.pdf from any path');
+      }
+      
+      // Try to load full PDF
+      const fullPDFPaths = [
+        path.join(process.cwd(), 'public', 'full-report-sample-original.pdf'),
+        path.join(process.cwd(), 'public', 'full-report-sample.pdf'),
+        path.join(process.cwd(), '..', 'public', 'full-report-sample-original.pdf'),
+        '/var/task/public/full-report-sample-original.pdf',
+        './public/full-report-sample-original.pdf',
+        path.join(__dirname, '..', '..', 'public', 'full-report-sample-original.pdf')
+      ];
+      
+      let fullPDFLoaded = false;
+      for (const pdfPath of fullPDFPaths) {
+        try {
+          console.log('📄 Trying to load full PDF from:', pdfPath);
+          fullPDF = fsSync.readFileSync(pdfPath);
+          console.log('✅ Full PDF loaded successfully from:', pdfPath);
+          console.log('✅ Full PDF size:', fullPDF.length);
+          fullPDFLoaded = true;
+          break;
+        } catch (pathError) {
+          console.log('❌ Failed path:', pdfPath);
+        }
+      }
+      
+      if (!fullPDFLoaded) {
+        throw new Error('Failed to load full-report-sample-original.pdf from any path');
+      }
       
       console.log('🎉 All static PDFs loaded successfully!');
       
@@ -143,14 +190,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         },
         // Static PDF 1 (email-report-one-page.pdf)
         {
-          content: onePagePDF.toString('base64'),
+          content: onePagePDF!.toString('base64'),
           filename: 'NBLK-Email-Report-One-Page.pdf',
           type: 'application/pdf',
           disposition: 'attachment',
         },
         // Static PDF 2 (full-report-sample-original.pdf)
         {
-          content: fullPDF.toString('base64'),
+          content: fullPDF!.toString('base64'),
           filename: 'NBLK-Full-Report-Sample.pdf',
           type: 'application/pdf',
           disposition: 'attachment',
