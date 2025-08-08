@@ -317,7 +317,7 @@ export default function LandingPage({ onExploreTools, onDashboard, onContact, on
       
       <footer className="py-6 bg-background backdrop-blur-md border-t border-border">
         <div className="max-w-5xl mx-auto px-4 text-center">
-          <p className="text-sm opacity-80 text-muted-foreground mb-5"> NNX1™ Business Solutions™ is your intelligent business companion — built for thinking of starting a business, small businesses, nonprofits & founders managing growth or complexity. Powered by the NNX1™ engine (patent pending), developed and licensed by NBLK LLC, this tool turns intuitive answers into expert insights and clear, actionable recommendations. Based on years of research, NNX1™ is designed with the human element in mind and built around key indicators of business success, scale & growth.</p>
+          <p className="text-sm opacity-80 text-muted-foreground mb-5">NNX1™ Business Solutions is your intelligent business companion — built for those thinking of starting a business, small businesses, nonprofits & founders managing growth or complexity. Powered by the NNX1™ engine. Developed and licensed by NBLK LLC, this tool turns intuitive answers into expert insights and clear, actionable recommendations. Based on years of research, NNX1™ is designed with the human element in mind and built around key indicators of business success, scale & growth.</p>
           
           {/* Footer Links */}
           <div className="flex flex-wrap justify-center items-center text-sm">
