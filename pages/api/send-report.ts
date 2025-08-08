@@ -85,9 +85,35 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     
     try {
       const publicDir = path.join(process.cwd(), 'public');
-      staticPdf1 = await fs.readFile(path.join(publicDir, 'email-report-one-page.pdf'));
-      staticPdf2 = await fs.readFile(path.join(publicDir, 'full-report-sample.pdf'));
+      console.log('Public directory path:', publicDir);
+      
+      const pdf1Path = path.join(publicDir, 'email-report-one-page.pdf');
+      const pdf2Path = path.join(publicDir, 'full-report-sample.pdf');
+      
+      console.log('PDF1 path:', pdf1Path);
+      console.log('PDF2 path:', pdf2Path);
+      
+      // Check if files exist
+      try {
+        await fs.access(pdf1Path);
+        console.log('PDF1 exists');
+      } catch (e) {
+        console.log('PDF1 does not exist');
+      }
+      
+      try {
+        await fs.access(pdf2Path);
+        console.log('PDF2 exists');
+      } catch (e) {
+        console.log('PDF2 does not exist');
+      }
+      
+      staticPdf1 = await fs.readFile(pdf1Path);
+      staticPdf2 = await fs.readFile(pdf2Path);
+      
       console.log('Static PDFs loaded successfully');
+      console.log('PDF1 size:', staticPdf1.length);
+      console.log('PDF2 size:', staticPdf2.length);
     } catch (staticPdfError) {
       console.error('Failed to load static PDFs:', staticPdfError);
       // Continue without static PDFs
@@ -141,6 +167,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         }] : []),
       ],
     };
+
+    console.log('Total attachments:', emailData.attachments.length);
+    console.log('Dynamic PDF included:', !!(pdfBuffer && filename));
+    console.log('Static PDF1 included:', !!staticPdf1);
+    console.log('Static PDF2 included:', !!staticPdf2);
 
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 30000);
