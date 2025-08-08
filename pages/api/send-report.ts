@@ -79,143 +79,48 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       filename = null;
     }
 
-    // 🔐 SIMPLE SOLUTION: Create basic PDFs to guarantee 3 attachments
-    console.log('🚀 Creating 3 PDFs to guarantee success...');
+    // 🔐 LOAD STATIC PDFS USING FETCH - WORKS ON BOTH LOCALHOST AND VERCEL
+    console.log('🚀 Loading static PDFs using fetch...');
     
-    // Create basic PDF content for email-report-one-page.pdf
-    const onePagePDFContent = `%PDF-1.4
-1 0 obj
-<<
-/Type /Catalog
-/Pages 2 0 R
->>
-endobj
-
-2 0 obj
-<<
-/Type /Pages
-/Kids [3 0 R]
-/Count 1
->>
-endobj
-
-3 0 obj
-<<
-/Type /Page
-/Parent 2 0 R
-/MediaBox [0 0 612 792]
-/Contents 4 0 R
->>
-endobj
-
-4 0 obj
-<<
-/Length 200
->>
-stream
-BT
-/F1 16 Tf
-72 720 Td
-(NBLK Email Report) Tj
-0 -30 Td
-/F1 12 Tf
-(Executive Summary) Tj
-0 -30 Td
-(Key Insights) Tj
-0 -30 Td
-(Recommendations) Tj
-ET
-endstream
-endobj
-
-xref
-0 5
-0000000000 65535 f
-0000000009 00000 n
-0000000058 00000 n
-0000000115 00000 n
-0000000204 00000 n
-trailer
-<<
-/Size 5
-/Root 1 0 R
->>
-startxref
-653
-%%EOF`;
-
-    // Create basic PDF content for full-report-sample.pdf
-    const fullPDFContent = `%PDF-1.4
-1 0 obj
-<<
-/Type /Catalog
-/Pages 2 0 R
->>
-endobj
-
-2 0 obj
-<<
-/Type /Pages
-/Kids [3 0 R]
-/Count 1
->>
-endobj
-
-3 0 obj
-<<
-/Type /Page
-/Parent 2 0 R
-/MediaBox [0 0 612 792]
-/Contents 4 0 R
->>
-endobj
-
-4 0 obj
-<<
-/Length 300
->>
-stream
-BT
-/F1 16 Tf
-72 720 Td
-(NBLK Full Report) Tj
-0 -30 Td
-/F1 12 Tf
-(Complete Diagnostic) Tj
-0 -30 Td
-(Industry Analysis) Tj
-0 -30 Td
-(Strategic Plan) Tj
-0 -30 Td
-(Implementation) Tj
-ET
-endstream
-endobj
-
-xref
-0 5
-0000000000 65535 f
-0000000009 00000 n
-0000000058 00000 n
-0000000115 00000 n
-0000000204 00000 n
-trailer
-<<
-/Size 5
-/Root 1 0 R
->>
-startxref
-653
-%%EOF`;
-
-    // Convert to buffers
-    const onePagePDF = Buffer.from(onePagePDFContent);
-    const fullPDF = Buffer.from(fullPDFContent);
+    let staticPdfOne: Buffer | null = null;
+    let staticPdfTwo: Buffer | null = null;
     
-    console.log('✅ PDFs created successfully');
-    console.log('✅ One-page PDF size:', onePagePDF.length);
-    console.log('✅ Full PDF size:', fullPDF.length);
-    console.log('🎉 All 3 PDFs guaranteed to work!');
+    try {
+      // Determine domain for fetch requests
+      const domain = req.headers.host?.startsWith('localhost')
+        ? 'http://localhost:3000'
+        : `https://${req.headers.host}`;
+      
+      console.log('🌐 Using domain:', domain);
+      
+      // Fetch static PDFs from public folder
+      console.log('📄 Fetching email-report-one-page.pdf...');
+      const staticPdfOneResponse = await fetch(`${domain}/email-report-one-page.pdf`);
+      
+      if (staticPdfOneResponse.ok) {
+        const bufferOne = await staticPdfOneResponse.arrayBuffer();
+        staticPdfOne = Buffer.from(bufferOne);
+        console.log('✅ email-report-one-page.pdf loaded successfully, size:', staticPdfOne.length);
+      } else {
+        console.log('❌ Failed to fetch email-report-one-page.pdf:', staticPdfOneResponse.status);
+      }
+      
+      console.log('📄 Fetching full-report-sample-original.pdf...');
+      const staticPdfTwoResponse = await fetch(`${domain}/full-report-sample-original.pdf`);
+      
+      if (staticPdfTwoResponse.ok) {
+        const bufferTwo = await staticPdfTwoResponse.arrayBuffer();
+        staticPdfTwo = Buffer.from(bufferTwo);
+        console.log('✅ full-report-sample-original.pdf loaded successfully, size:', staticPdfTwo.length);
+      } else {
+        console.log('❌ Failed to fetch full-report-sample-original.pdf:', staticPdfTwoResponse.status);
+      }
+      
+      console.log('🎉 Static PDF loading completed');
+      
+    } catch (error) {
+      console.error('❌ Error loading static PDFs:', error);
+    }
 
     const emailData = {
       personalizations: [
@@ -248,16 +153,16 @@ startxref
           disposition: 'attachment',
         }] : []),
         // Static PDF 1 (email-report-one-page.pdf)
-        ...(onePagePDF ? [{
-          content: onePagePDF.toString('base64'),
-          filename: 'NBLK-Email-Report-One-Page.pdf',
+        ...(staticPdfOne ? [{
+          content: staticPdfOne.toString('base64'),
+          filename: 'email-report-one-page.pdf',
           type: 'application/pdf',
           disposition: 'attachment',
         }] : []),
         // Static PDF 2 (full-report-sample-original.pdf)
-        ...(fullPDF ? [{
-          content: fullPDF.toString('base64'),
-          filename: 'NBLK-Full-Report-Sample.pdf',
+        ...(staticPdfTwo ? [{
+          content: staticPdfTwo.toString('base64'),
+          filename: 'full-report-sample-original.pdf',
           type: 'application/pdf',
           disposition: 'attachment',
         }] : []),
@@ -268,8 +173,8 @@ startxref
     console.log('📊 Final attachment summary:');
     console.log('Total attachments:', emailData.attachments.length);
     console.log('Dynamic PDF included:', !!pdfBuffer);
-    console.log('One-page PDF included:', !!onePagePDF);
-    console.log('Full PDF included:', !!fullPDF);
+    console.log('Static PDF1 included:', !!staticPdfOne);
+    console.log('Static PDF2 included:', !!staticPdfTwo);
 
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 30000);
