@@ -71,6 +71,24 @@ export default function NBLKToolsHub() {
     setMounted(true)
   }, [])
 
+  // Handle dashboard view results data
+  useEffect(() => {
+    if (currentView === "partial-report") {
+      const dashboardData = sessionStorage.getItem('dashboard_view_results')
+      if (dashboardData) {
+        const data = JSON.parse(dashboardData)
+        sessionStorage.removeItem('dashboard_view_results') // Clean up
+        console.log(`🔄 Loading dashboard data: ${data.toolName}, Score: ${data.score}`)
+        console.log(`🔄 Setting state - selectedTool: ${data.toolName}, score: ${data.score}`)
+        setSelectedTool(data.toolName)
+        setScore(data.score)
+        setAnswers(data.answers)
+      } else {
+        console.log(`🔄 No dashboard data found, using current state - selectedTool: ${selectedTool}, score: ${score}`)
+      }
+    }
+  }, [currentView])
+
   const handleLogoClick = () => {
     setCurrentView("landing")
     setPreviousView("landing")
@@ -211,6 +229,8 @@ export default function NBLKToolsHub() {
             onComplete={handleDiagnosticComplete}
             onBack={() => setCurrentView("tools")}
             onLogoClick={handleLogoClick}
+            onReturnToResults={() => setCurrentView("partial-report")}
+            isCompleted={completedTools.includes(selectedTool)}
           />
         )}
 

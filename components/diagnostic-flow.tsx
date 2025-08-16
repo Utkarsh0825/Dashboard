@@ -11,31 +11,45 @@ import Image from "next/image"
 import { questionSets } from "@/lib/questions"
 import { saveQuestionnaireResponseSimple, generateSessionId } from "@/lib/simple-supabase-api"
 import type { DiagnosticAnswer } from "@/app/page"
+import { saveDiagnosticProgress, getResumeData } from "@/lib/dashboard-tracking"
 
 interface DiagnosticFlowProps {
   toolName: string
   onComplete: (answers: DiagnosticAnswer[]) => void
   onBack: () => void
   onLogoClick: () => void
+  onReturnToResults?: () => void
+  isCompleted?: boolean
 }
 
-export default function DiagnosticFlow({ toolName, onComplete, onBack, onLogoClick }: DiagnosticFlowProps) {
+export default function DiagnosticFlow({ toolName, onComplete, onBack, onLogoClick, onReturnToResults, isCompleted = false }: DiagnosticFlowProps) {
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0)
   const [answers, setAnswers] = useState<DiagnosticAnswer[]>([])
   const [dropdownOpen, setDropdownOpen] = useState(false)
   const [contactDialogOpen, setContactDialogOpen] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const [sessionId, setSessionId] = useState<string>("")
+  const [isResuming, setIsResuming] = useState(false)
 
   const questions = questionSets[toolName] || []
   const currentQuestion = questions[currentQuestionIndex]
   const progress = ((currentQuestionIndex + 1) / questions.length) * 100
 
-  // Generate session ID when component mounts
+  // Check for existing progress and resume if available
   useEffect(() => {
-    const newSessionId = generateSessionId()
-    setSessionId(newSessionId)
-    console.log(`Started new session: ${newSessionId} for tool: ${toolName}`)
+    const existingProgress = getResumeData(toolName)
+    
+    if (existingProgress && !existingProgress.completed) {
+      console.log(`🔄 Resuming diagnostic: ${toolName} from question ${existingProgress.currentQuestion}`)
+      setSessionId(existingProgress.sessionId)
+      setCurrentQuestionIndex(existingProgress.currentQuestion)
+      setAnswers(existingProgress.answers)
+      setIsResuming(true)
+    } else {
+      const newSessionId = generateSessionId()
+      setSessionId(newSessionId)
+      console.log(`Started new session: ${newSessionId} for tool: ${toolName}`)
+    }
   }, [toolName])
 
   const handleAnswer = async (answer: "Yes" | "No") => {
@@ -65,8 +79,41 @@ export default function DiagnosticFlow({ toolName, onComplete, onBack, onLogoCli
 
       if (currentQuestionIndex < questions.length - 1) {
         setCurrentQuestionIndex(currentQuestionIndex + 1)
+        
+        // Save progress to dashboard tracking
+        saveDiagnosticProgress({
+          toolName,
+          completed: false,
+          score: 0,
+          currentQuestion: currentQuestionIndex + 1,
+          totalQuestions: questions.length,
+          answers: newAnswers,
+          startedAt: Date.now(),
+          sessionId
+        })
       } else {
         console.log(`Completed questionnaire for ${toolName}`)
+        
+        // Save completion to dashboard tracking
+        const yesCount = newAnswers.filter(a => a.answer === "Yes").length
+        const score = Math.round((yesCount / questions.length) * 100)
+        
+        console.log(`🎯 Saving diagnostic completion: ${toolName}, Score: ${score}%, Completed: true`)
+        
+        saveDiagnosticProgress({
+          toolName,
+          completed: true,
+          score,
+          currentQuestion: questions.length,
+          totalQuestions: questions.length,
+          answers: newAnswers,
+          startedAt: Date.now(),
+          completedAt: Date.now(),
+          sessionId
+        })
+        
+        console.log(`✅ Diagnostic completion saved for: ${toolName}`)
+        
         onComplete(newAnswers)
       }
     } catch (error) {
@@ -91,6 +138,30 @@ export default function DiagnosticFlow({ toolName, onComplete, onBack, onLogoCli
 
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col max-w-5xl mx-auto">
+      {/* Resume Notification */}
+      {isResuming && (
+        <div className="bg-blue-500/10 border border-blue-500/20 px-4 py-3">
+          <div className="flex items-center gap-3">
+            <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+            <p className="text-sm text-blue-300">
+              Resuming from question {currentQuestionIndex + 1} of {questions.length}
+            </p>
+            <button 
+              onClick={() => {
+                setIsResuming(false)
+                setCurrentQuestionIndex(0)
+                setAnswers([])
+                const newSessionId = generateSessionId()
+                setSessionId(newSessionId)
+              }}
+              className="text-xs text-blue-300 hover:text-blue-100 underline"
+            >
+              Start Fresh
+            </button>
+          </div>
+        </div>
+      )}
+      
       {/* Header */}
       <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-md px-4 py-4 flex items-center justify-between border-b border-border">
         <button onClick={onBack} className="p-2">
@@ -99,6 +170,14 @@ export default function DiagnosticFlow({ toolName, onComplete, onBack, onLogoCli
         <h1 className="text-base font-medium text-center flex-1">
           {toolName.replace("Diagnostic", "")}
         </h1>
+        {isCompleted && onReturnToResults && (
+          <button 
+            onClick={onReturnToResults}
+            className="text-sm text-blue-400 hover:text-blue-300 transition-colors"
+          >
+            Return to Results
+          </button>
+        )}
         {/* Theme Toggle */}
         <ThemeToggle />
         {/* Modern Dropdown Menu */}

@@ -10,6 +10,7 @@ import { ThemeToggle } from "@/components/ui/theme-toggle"
 import { Listbox, Transition } from "@headlessui/react"
 import { ChevronDownIcon, CheckIcon } from "@heroicons/react/20/solid"
 import type { DiagnosticAnswer } from "@/app/page"
+import { saveReportRequest, updateUserData } from "@/lib/dashboard-tracking"
 
 interface EmailCaptureProps {
   onSubmit?: (name: string, email: string) => void
@@ -301,6 +302,18 @@ Phone: (212) 598-3030
       if (response.ok) {
         const responseData = await response.json()
         console.log('✅ Email sent successfully:', responseData)
+        
+        // Save report request to dashboard tracking
+        saveReportRequest({
+          toolName,
+          name: fullName,
+          email: fullEmail,
+          score
+        })
+        
+        // Update user data
+        updateUserData(fullName, fullEmail)
+        
         // Success will be shown after loading screen completes
       } else {
         const errorData = await response.text()

@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { ArrowRight, BarChart3, TrendingUp, Zap, Target, CheckCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent } from '@/components/ui/dialog'
+import { savePhaseCompletion } from '@/lib/dashboard-tracking'
 
 interface PhaseAssessmentModalProps {
   isOpen: boolean
@@ -137,6 +138,10 @@ export default function PhaseAssessmentModal({ isOpen, onClose, onExploreTools }
     if (currentQuestion < questions.length - 1) {
       setCurrentQuestion(currentQuestion + 1)
     } else {
+      // Save phase completion to dashboard tracking
+      const yesCount = newAnswers.filter(answer => answer).length
+      const score = Math.round((yesCount / questions.length) * 100)
+      savePhaseCompletion(phase, score, newAnswers)
       setShowResult(true)
     }
   }
