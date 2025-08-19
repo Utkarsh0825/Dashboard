@@ -89,6 +89,24 @@ export default function NBLKToolsHub() {
     }
   }, [currentView])
 
+  // Handle dashboard email capture data
+  useEffect(() => {
+    if (currentView === "email-capture") {
+      const emailCaptureData = sessionStorage.getItem('dashboard_email_capture')
+      if (emailCaptureData) {
+        const data = JSON.parse(emailCaptureData)
+        sessionStorage.removeItem('dashboard_email_capture') // Clean up
+        console.log(`📧 Loading email capture data: ${data.toolName}, Score: ${data.score}`)
+        console.log(`📧 Setting state - selectedTool: ${data.toolName}, score: ${data.score}`)
+        setSelectedTool(data.toolName)
+        setScore(data.score)
+        setAnswers(data.answers)
+      } else {
+        console.log(`📧 No email capture data found, using current state - selectedTool: ${selectedTool}, score: ${score}`)
+      }
+    }
+  }, [currentView])
+
   const handleLogoClick = () => {
     setCurrentView("landing")
     setPreviousView("landing")

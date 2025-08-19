@@ -7,6 +7,8 @@ import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { ThemeToggle } from "@/components/ui/theme-toggle"
 import type { DiagnosticAnswer } from "@/app/page"
+import { logActivity, ActivityTypes } from "@/lib/activity-manager"
+
 
 interface PartialReportProps {
   toolName: string
@@ -64,6 +66,16 @@ export default function PartialReport({
       setStep3Complete(sessionStorage.getItem('toolsHubMilestoneStep3Complete') === 'true');
     }
   }, []);
+
+  // Track report viewed (only once)
+  // Track report viewed
+  useEffect(() => {
+    logActivity({
+      type: ActivityTypes.REPORT_VIEWED,
+      toolName,
+      description: `Partial report seen for ${toolName}`
+    })
+  }, [toolName])
 
   const handleResendReport = async () => {
     if (resendCooldown > 0) return;

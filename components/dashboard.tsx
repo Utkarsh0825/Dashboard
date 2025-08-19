@@ -10,7 +10,6 @@ import { Switch } from "@/components/ui/switch"
 import { 
   getDashboardData, 
   getDashboardMetrics, 
-  getRecentActivities, 
   getPhaseData, 
   getAllDiagnosticProgress,
   getReports,
@@ -19,9 +18,11 @@ import {
   formatLastActive,
   saveDiagnosticProgress,
   markReportDownloaded,
-  updateUserActivity,
-  clearDiagnosticProgress
+  clearDiagnosticProgress,
+  getDiagnosticInsights
 } from "@/lib/dashboard-tracking"
+import { getActivities, clearActivities } from "@/lib/activity-manager"
+import { useActivities } from "@/hooks/use-activities"
 
 interface DashboardProps {
   onBack: () => void
@@ -38,34 +39,35 @@ export default function Dashboard({ onBack, onLogoClick, navigateToView, onDashb
   const [showAllTools, setShowAllTools] = useState(true)
   const [showReportModal, setShowReportModal] = useState(false)
   const [selectedReport, setSelectedReport] = useState<any>(null)
-  const [dashboardData, setDashboardData] = useState(getDashboardData())
+  const [isDownloading, setIsDownloading] = useState(false)
+    const [dashboardData, setDashboardData] = useState(getDashboardData())
   const [metrics, setMetrics] = useState(getDashboardMetrics())
-  const [activities, setActivities] = useState(getRecentActivities())
+  const activities = useActivities(10)
   const [phaseData, setPhaseData] = useState(getPhaseData())
   const [diagnosticProgress, setDiagnosticProgress] = useState(getAllDiagnosticProgress())
   const [reports, setReports] = useState(getReports())
   const [userData, setUserData] = useState(getUserData())
   const mobileMenuRef = useRef<HTMLDivElement>(null)
+  const [showGuidedExperience, setShowGuidedExperience] = useState(false)
+  const [guidedTarget, setGuidedTarget] = useState<string>('')
 
   // Refresh dashboard data
   useEffect(() => {
     const refreshData = () => {
       const newData = getDashboardData()
       const newMetrics = getDashboardMetrics()
-      const newActivities = getRecentActivities()
+      const newActivities = getActivities()
       const newPhaseData = getPhaseData()
       const newDiagnosticProgress = getAllDiagnosticProgress()
       const newReports = getReports()
       const newUserData = getUserData()
       
       console.log(`🔄 Dashboard refresh - Activities: ${newActivities.length}, Diagnostics: ${newDiagnosticProgress.length}, Completed: ${newDiagnosticProgress.filter(d => d.completed).length}`)
-      if (newActivities.length > 0) {
-        console.log(`📊 Latest activity: ${newActivities[0].description}`)
-      }
+      console.log(`🔍 Phase data:`, newPhaseData)
       
       setDashboardData(newData)
       setMetrics(newMetrics)
-      setActivities(newActivities)
+
       setPhaseData(newPhaseData)
       setDiagnosticProgress(newDiagnosticProgress)
       setReports(newReports)
@@ -97,8 +99,19 @@ export default function Dashboard({ onBack, onLogoClick, navigateToView, onDashb
     if (typeof window !== 'undefined') {
       window.scrollTo(0, 0)
     }
+    // Set a flag to indicate user is coming from dashboard for guided experience
+    sessionStorage.setItem('dashboard_guided_navigation', 'phase_assessment')
     navigateToView("tools")
-    // This will open the phase modal in tools hub
+  }
+
+  // Handle business health overview navigation
+  const handleBusinessHealthNavigation = (toolName: string) => {
+    if (typeof window !== 'undefined') {
+      window.scrollTo(0, 0)
+    }
+    // Set a flag to indicate user is coming from dashboard for guided experience
+    sessionStorage.setItem('dashboard_guided_navigation', `business_health_${toolName}`)
+    navigateToView("tools")
   }
 
   // Handle diagnostic navigation with resume functionality
@@ -108,10 +121,10 @@ export default function Dashboard({ onBack, onLogoClick, navigateToView, onDashb
     }
     
     const progress = diagnosticProgress.find(d => d.toolName === toolName)
+    
     if (progress && !progress.completed) {
       // Resume from where user left off
       navigateToView("diagnostic")
-      // The diagnostic flow will handle resuming
     } else if (progress && progress.completed) {
       // Ask user if they want to retake or view results
       const choice = confirm('This diagnostic is completed. Would you like to retake it? Click OK to retake, Cancel to view results.')
@@ -121,7 +134,10 @@ export default function Dashboard({ onBack, onLogoClick, navigateToView, onDashb
         navigateToView("partial-report")
       }
     } else {
-      // Start new diagnostic
+      // Start new diagnostic with guided experience
+      // Set a flag to indicate user is coming from dashboard for guided experience
+      console.log(`🎯 Setting guided navigation for progress overview: progress_overview_${toolName}`)
+      sessionStorage.setItem('dashboard_guided_navigation', `progress_overview_${toolName}`)
       onExploreTools()
     }
   }
@@ -156,7 +172,6 @@ export default function Dashboard({ onBack, onLogoClick, navigateToView, onDashb
   const handleRetakeDiagnostic = (toolName: string) => {
     if (confirm('Are you sure you want to retake this diagnostic? This will clear your previous progress.')) {
       clearDiagnosticProgress(toolName)
-      forceRefresh()
       if (typeof window !== 'undefined') {
         window.scrollTo(0, 0)
       }
@@ -189,43 +204,108 @@ export default function Dashboard({ onBack, onLogoClick, navigateToView, onDashb
     }
   }
 
+  // Handle single report download
+  const handleDownloadReport = async (report: any) => {
+    setIsDownloading(true)
+    try {
+      // Validate that we have the required data
+      if (!report.answers || !Array.isArray(report.answers) || report.answers.length === 0) {
+        throw new Error('Missing diagnostic answers. Please retake the diagnostic.')
+      }
+
+      const response = await fetch('/api/download-report', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          toolName: report.toolName,
+          score: report.score,
+          answers: report.answers,
+          name: report.name || userData.name,
+          email: report.email || userData.email
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to generate PDF')
+      }
+
+      const blob = await response.blob()
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `${report.toolName.replace(/\s+/g, '-').toLowerCase()}-report.pdf`
+      document.body.appendChild(a)
+      a.click()
+      window.URL.revokeObjectURL(url)
+      document.body.removeChild(a)
+    } catch (error) {
+      console.error('Download failed:', error)
+      alert('Failed to download report. Please try again.')
+    } finally {
+      setIsDownloading(false)
+    }
+  }
+
+  // Handle all reports download
+  const handleDownloadAllReports = async () => {
+    setIsDownloading(true)
+    try {
+      // Get completed diagnostics with full data (including answers)
+      const completedDiagnostics = diagnosticProgress.filter(d => d.completed)
+      
+      if (completedDiagnostics.length === 0) {
+        alert('No completed diagnostics available for download.')
+        return
+      }
+
+      const response = await fetch('/api/download-all-reports', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          reports: completedDiagnostics,
+          name: userData.name || 'User'
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to generate ZIP')
+      }
+
+      const blob = await response.blob()
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `${userData.name || 'user'}-diagnostic-reports.zip`
+      document.body.appendChild(a)
+      a.click()
+      window.URL.revokeObjectURL(url)
+      document.body.removeChild(a)
+    } catch (error) {
+      console.error('Download failed:', error)
+      alert('Failed to download reports. Please try again.')
+    } finally {
+      setIsDownloading(false)
+    }
+  }
+
   // Handle reset
   const handleReset = () => {
     if (confirm('Are you sure you want to reset all progress? This cannot be undone.')) {
+      console.log(`🔄 Resetting dashboard data...`)
       localStorage.removeItem('nblk_dashboard_data')
+      clearActivities() // Clear activities too
+      console.log(`✅ Dashboard data cleared, reloading page...`)
       window.location.reload()
     }
   }
 
-  // Force refresh dashboard data
-  const forceRefresh = () => {
-    const newData = getDashboardData()
-    const newMetrics = getDashboardMetrics()
-    const newActivities = getRecentActivities()
-    const newPhaseData = getPhaseData()
-    const newDiagnosticProgress = getAllDiagnosticProgress()
-    const newReports = getReports()
-    const newUserData = getUserData()
-    
-    setDashboardData(newData)
-    setMetrics(newMetrics)
-    setActivities(newActivities)
-    setPhaseData(newPhaseData)
-    setDiagnosticProgress(newDiagnosticProgress)
-    setReports(newReports)
-    setUserData(newUserData)
-  }
 
-  // Test activity function
-  const testActivity = () => {
-    updateUserActivity({
-      type: 'diagnostic_completed',
-      toolName: 'Test Tool',
-      score: 85,
-      description: 'Test activity added manually'
-    })
-    forceRefresh()
-  }
+
+
 
   const footerLinks = [
     {
@@ -311,22 +391,8 @@ export default function Dashboard({ onBack, onLogoClick, navigateToView, onDashb
             >
               Start Fresh (Reset)
             </Button>
-            <Button 
-              variant="ghost"
-              size="sm"
-              className="p-2"
-              onClick={forceRefresh}
-            >
-              <RefreshCw className="w-4 h-4" />
-            </Button>
-            <Button 
-              variant="ghost"
-              size="sm"
-              className="p-2"
-              onClick={testActivity}
-            >
-              Test
-            </Button>
+
+
             <ThemeToggle />
             {/* Mobile menu button */}
             <button 
@@ -581,7 +647,18 @@ export default function Dashboard({ onBack, onLogoClick, navigateToView, onDashb
           {showAllTools && (
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {/* Data Hygiene Card */}
-              <div className="bg-card border border-border rounded-lg p-6">
+              <div className={`bg-card border border-border rounded-lg p-6 relative ${
+                showGuidedExperience && guidedTarget === "Data Hygiene & Business Clarity Diagnostic" 
+                  ? 'animate-pulse bg-blue-50 dark:bg-blue-900/20 shadow-lg shadow-blue-500/25 border-blue-300 dark:border-blue-700' 
+                  : ''
+              }`}>
+                {/* Contextual Guide for Data Hygiene */}
+                {showGuidedExperience && guidedTarget === "Data Hygiene & Business Clarity Diagnostic" && (
+                  <div className="absolute -top-2 -right-2 bg-blue-500 text-white text-xs px-2 py-1 rounded-full shadow-lg animate-pulse">
+                    <Target className="w-3 h-3 inline mr-1" />
+                    Start Here
+                  </div>
+                )}
                 <div className="flex items-center gap-3 mb-4">
                   <Target className="w-5 h-5 text-muted-foreground" />
                   <h3 className="text-base font-medium text-foreground">Data Hygiene & Business Clarity</h3>
@@ -590,7 +667,7 @@ export default function Dashboard({ onBack, onLogoClick, navigateToView, onDashb
                   {(() => {
                     const progress = diagnosticProgress.find(d => d.toolName === "Data Hygiene & Business Clarity Diagnostic")
                     if (!progress) {
-                      return <span className="text-xs bg-gray-600 text-white px-2 py-1 rounded">Not Started</span>
+                      return <span className="text-xs bg-muted text-muted-foreground px-2 py-1 rounded">Not Started</span>
                     } else if (progress.completed) {
                       return <span className="text-xs bg-green-600 text-white px-2 py-1 rounded">Completed</span>
                     } else {
@@ -610,7 +687,7 @@ export default function Dashboard({ onBack, onLogoClick, navigateToView, onDashb
                       })()}
                     </span>
                   </div>
-                  <div className="w-full bg-gray-700 rounded-full h-2">
+                  <div className="w-full bg-muted rounded-full h-2">
                     <div 
                       className="bg-blue-500 h-2 rounded-full transition-all duration-500" 
                       style={{
@@ -626,7 +703,7 @@ export default function Dashboard({ onBack, onLogoClick, navigateToView, onDashb
                 <div className="space-y-2">
                   <button 
                     onClick={() => handleDiagnosticStart("Data Hygiene & Business Clarity Diagnostic")}
-                    className="w-full bg-white text-black hover:bg-gray-100 py-2 px-4 rounded text-sm font-medium"
+                    className="w-full bg-card text-card-foreground border border-border hover:bg-muted py-2 px-4 rounded text-sm font-medium"
                   >
                     {(() => {
                       const progress = diagnosticProgress.find(d => d.toolName === "Data Hygiene & Business Clarity Diagnostic")
@@ -653,7 +730,18 @@ export default function Dashboard({ onBack, onLogoClick, navigateToView, onDashb
               </div>
 
               {/* Marketing Card */}
-              <div className="bg-card border border-border rounded-lg p-6">
+              <div className={`bg-card border border-border rounded-lg p-6 relative ${
+                showGuidedExperience && guidedTarget === "Marketing Effectiveness Diagnostic" 
+                  ? 'animate-pulse bg-blue-50 dark:bg-blue-900/20 shadow-lg shadow-blue-500/25 border-blue-300 dark:border-blue-700' 
+                  : ''
+              }`}>
+                {/* Contextual Guide for Marketing */}
+                {showGuidedExperience && guidedTarget === "Marketing Effectiveness Diagnostic" && (
+                  <div className="absolute -top-2 -right-2 bg-blue-500 text-white text-xs px-2 py-1 rounded-full shadow-lg animate-pulse">
+                    <Target className="w-3 h-3 inline mr-1" />
+                    Start Here
+                  </div>
+                )}
                 <div className="flex items-center gap-3 mb-4">
                   <TrendingUp className="w-5 h-5 text-muted-foreground" />
                   <h3 className="text-base font-medium text-foreground">Marketing Effectiveness</h3>
@@ -662,7 +750,7 @@ export default function Dashboard({ onBack, onLogoClick, navigateToView, onDashb
                   {(() => {
                     const progress = diagnosticProgress.find(d => d.toolName === "Marketing Effectiveness Diagnostic")
                     if (!progress) {
-                      return <span className="text-xs bg-gray-600 text-white px-2 py-1 rounded">Not Started</span>
+                      return <span className="text-xs bg-muted text-muted-foreground px-2 py-1 rounded">Not Started</span>
                     } else if (progress.completed) {
                       return <span className="text-xs bg-green-600 text-white px-2 py-1 rounded">Completed</span>
                     } else {
@@ -682,7 +770,7 @@ export default function Dashboard({ onBack, onLogoClick, navigateToView, onDashb
                       })()}
                     </span>
                   </div>
-                  <div className="w-full bg-gray-700 rounded-full h-2">
+                  <div className="w-full bg-muted rounded-full h-2">
                     <div 
                       className="bg-blue-500 h-2 rounded-full transition-all duration-500" 
                       style={{
@@ -698,7 +786,7 @@ export default function Dashboard({ onBack, onLogoClick, navigateToView, onDashb
                 <div className="space-y-2">
                   <button 
                     onClick={() => handleDiagnosticStart("Marketing Effectiveness Diagnostic")}
-                    className="w-full bg-white text-black hover:bg-gray-100 py-2 px-4 rounded text-sm font-medium"
+                    className="w-full bg-card text-card-foreground border border-border hover:bg-muted py-2 px-4 rounded text-sm font-medium"
                   >
                     {(() => {
                       const progress = diagnosticProgress.find(d => d.toolName === "Marketing Effectiveness Diagnostic")
@@ -725,7 +813,18 @@ export default function Dashboard({ onBack, onLogoClick, navigateToView, onDashb
               </div>
 
               {/* Cash Flow Card */}
-              <div className="bg-card border border-border rounded-lg p-6">
+              <div className={`bg-card border border-border rounded-lg p-6 relative ${
+                showGuidedExperience && guidedTarget === "Cash Flow & Financial Clarity Diagnostic" 
+                  ? 'animate-pulse bg-blue-50 dark:bg-blue-900/20 shadow-lg shadow-blue-500/25 border-blue-300 dark:border-blue-700' 
+                  : ''
+              }`}>
+                {/* Contextual Guide for Cash Flow */}
+                {showGuidedExperience && guidedTarget === "Cash Flow & Financial Clarity Diagnostic" && (
+                  <div className="absolute -top-2 -right-2 bg-blue-500 text-white text-xs px-2 py-1 rounded-full shadow-lg animate-pulse">
+                    <Target className="w-3 h-3 inline mr-1" />
+                    Start Here
+                  </div>
+                )}
                 <div className="flex items-center gap-3 mb-4">
                   <BarChart3 className="w-5 h-5 text-muted-foreground" />
                   <h3 className="text-base font-medium text-foreground">Cash Flow & Financial Clarity</h3>
@@ -734,7 +833,7 @@ export default function Dashboard({ onBack, onLogoClick, navigateToView, onDashb
                   {(() => {
                     const progress = diagnosticProgress.find(d => d.toolName === "Cash Flow & Financial Clarity Diagnostic")
                     if (!progress) {
-                      return <span className="text-xs bg-gray-600 text-white px-2 py-1 rounded">Not Started</span>
+                      return <span className="text-xs bg-muted text-muted-foreground px-2 py-1 rounded">Not Started</span>
                     } else if (progress.completed) {
                       return <span className="text-xs bg-green-600 text-white px-2 py-1 rounded">Completed</span>
                     } else {
@@ -754,7 +853,7 @@ export default function Dashboard({ onBack, onLogoClick, navigateToView, onDashb
                       })()}
                     </span>
                   </div>
-                  <div className="w-full bg-gray-700 rounded-full h-2">
+                  <div className="w-full bg-muted rounded-full h-2">
                     <div 
                       className="bg-blue-500 h-2 rounded-full transition-all duration-500" 
                       style={{
@@ -770,7 +869,7 @@ export default function Dashboard({ onBack, onLogoClick, navigateToView, onDashb
                 <div className="space-y-2">
                   <button 
                     onClick={() => handleDiagnosticStart("Cash Flow & Financial Clarity Diagnostic")}
-                    className="w-full bg-white text-black hover:bg-gray-100 py-2 px-4 rounded text-sm font-medium"
+                    className="w-full bg-card text-card-foreground border border-border hover:bg-muted py-2 px-4 rounded text-sm font-medium"
                   >
                     {(() => {
                       const progress = diagnosticProgress.find(d => d.toolName === "Cash Flow & Financial Clarity Diagnostic")
@@ -799,24 +898,24 @@ export default function Dashboard({ onBack, onLogoClick, navigateToView, onDashb
               {/* Operational Efficiency Card */}
               <div className="bg-card border border-border rounded-lg p-6">
                 <div className="flex items-center gap-3 mb-4">
-                  <div className="w-5 h-5 bg-gray-400 rounded-full"></div>
+                  <div className="w-5 h-5 bg-muted rounded-full"></div>
                   <h3 className="text-base font-medium text-foreground">Operational Efficiency</h3>
                 </div>
                 <div className="flex items-center justify-between mb-4">
-                  <span className="text-xs bg-gray-600 text-white px-2 py-1 rounded">Coming Soon</span>
+                  <span className="text-xs bg-muted text-muted-foreground px-2 py-1 rounded">Coming Soon</span>
                 </div>
                 <div className="space-y-2 mb-4">
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">Progress</span>
                     <span className="text-foreground">0/10</span>
                   </div>
-                  <div className="w-full bg-gray-700 rounded-full h-2">
-                    <div className="bg-gray-500 h-2 rounded-full" style={{width: '0%'}}></div>
+                  <div className="w-full bg-muted rounded-full h-2">
+                    <div className="bg-muted-foreground h-2 rounded-full" style={{width: '0%'}}></div>
                   </div>
                 </div>
                 <button 
                   disabled
-                  className="w-full bg-gray-600 text-gray-400 py-2 px-4 rounded text-sm font-medium cursor-not-allowed"
+                  className="w-full bg-muted text-muted-foreground py-2 px-4 rounded text-sm font-medium cursor-not-allowed"
                 >
                   Coming Soon
                 </button>
@@ -825,24 +924,24 @@ export default function Dashboard({ onBack, onLogoClick, navigateToView, onDashb
               {/* Customer Retention Card */}
               <div className="bg-card border border-border rounded-lg p-6">
                 <div className="flex items-center gap-3 mb-4">
-                  <div className="w-5 h-5 bg-gray-400 rounded-full"></div>
+                  <div className="w-5 h-5 bg-muted rounded-full"></div>
                   <h3 className="text-base font-medium text-foreground">Customer Retention & Growth</h3>
                 </div>
                 <div className="flex items-center justify-between mb-4">
-                  <span className="text-xs bg-gray-600 text-white px-2 py-1 rounded">Coming Soon</span>
+                  <span className="text-xs bg-muted text-muted-foreground px-2 py-1 rounded">Coming Soon</span>
                 </div>
                 <div className="space-y-2 mb-4">
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">Progress</span>
                     <span className="text-foreground">0/10</span>
                   </div>
-                  <div className="w-full bg-gray-700 rounded-full h-2">
-                    <div className="bg-gray-500 h-2 rounded-full" style={{width: '0%'}}></div>
+                  <div className="w-full bg-muted rounded-full h-2">
+                    <div className="bg-muted-foreground h-2 rounded-full" style={{width: '0%'}}></div>
                   </div>
                 </div>
                 <button 
                   disabled
-                  className="w-full bg-gray-600 text-gray-400 py-2 px-4 rounded text-sm font-medium cursor-not-allowed"
+                  className="w-full bg-muted text-muted-foreground py-2 px-4 rounded text-sm font-medium cursor-not-allowed"
                 >
                   Coming Soon
                 </button>
@@ -851,24 +950,24 @@ export default function Dashboard({ onBack, onLogoClick, navigateToView, onDashb
               {/* Team Support Card */}
               <div className="bg-card border border-border rounded-lg p-6">
                 <div className="flex items-center gap-3 mb-4">
-                  <div className="w-5 h-5 bg-gray-400 rounded-full"></div>
+                  <div className="w-5 h-5 bg-muted rounded-full"></div>
                   <h3 className="text-base font-medium text-foreground">Support & Grow Your Team</h3>
                 </div>
                 <div className="flex items-center justify-between mb-4">
-                  <span className="text-xs bg-gray-600 text-white px-2 py-1 rounded">Coming Soon</span>
+                  <span className="text-xs bg-muted text-muted-foreground px-2 py-1 rounded">Coming Soon</span>
                 </div>
                 <div className="space-y-2 mb-4">
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">Progress</span>
                     <span className="text-foreground">0/10</span>
                   </div>
-                  <div className="w-full bg-gray-700 rounded-full h-2">
-                    <div className="bg-gray-500 h-2 rounded-full" style={{width: '0%'}}></div>
+                  <div className="w-full bg-muted rounded-full h-2">
+                    <div className="bg-muted-foreground h-2 rounded-full" style={{width: '0%'}}></div>
                   </div>
                 </div>
                 <button 
                   disabled
-                  className="w-full bg-gray-600 text-gray-400 py-2 px-4 rounded text-sm font-medium cursor-not-allowed"
+                  className="w-full bg-muted text-muted-foreground py-2 px-4 rounded text-sm font-medium cursor-not-allowed"
                 >
                   Coming Soon
                 </button>
@@ -887,14 +986,25 @@ export default function Dashboard({ onBack, onLogoClick, navigateToView, onDashb
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {/* Data Hygiene & Business Clarity */}
-            <div className="bg-card border border-border rounded-lg p-6">
+            <div className={`bg-card border border-border rounded-lg p-6 relative flex flex-col ${
+              showGuidedExperience && guidedTarget === "Data Hygiene & Business Clarity Diagnostic" 
+                ? 'animate-pulse bg-blue-50 dark:bg-blue-900/20 shadow-lg shadow-blue-500/25 border-blue-300 dark:border-blue-700' 
+                : ''
+            }`}>
+              {/* Contextual Guide for Data Hygiene Business Health */}
+              {showGuidedExperience && guidedTarget === "Data Hygiene & Business Clarity Diagnostic" && (
+                <div className="absolute -top-2 -right-2 bg-blue-500 text-white text-xs px-2 py-1 rounded-full shadow-lg animate-pulse">
+                  <Target className="w-3 h-3 inline mr-1" />
+                  Start Here
+                </div>
+              )}
               <div className="flex items-center gap-3 mb-4">
                 <Target className="w-5 h-5 text-muted-foreground" />
                 <h3 className="text-lg font-semibold text-foreground">Data Hygiene & Business Clarity</h3>
               </div>
               <p className="text-sm text-muted-foreground mb-4">Organize and optimize your business data</p>
               
-              <div className="space-y-3 mb-6">
+              <div className="space-y-3 mb-6 flex-grow">
                 <div className="flex items-center gap-3">
                   <div className="w-3 h-3 bg-green-500 rounded-full"></div>
                   <span className="text-sm text-foreground">Data Organization</span>
@@ -918,27 +1028,33 @@ export default function Dashboard({ onBack, onLogoClick, navigateToView, onDashb
               </div>
               
               <button 
-                onClick={() => {
-                  if (typeof window !== 'undefined') {
-                    window.scrollTo(0, 0)
-                  }
-                  onExploreTools()
-                }}
-                className="w-full bg-gray-800 text-white hover:bg-gray-700 py-2 px-4 rounded text-sm font-medium"
+                onClick={() => handleBusinessHealthNavigation("Data Hygiene & Business Clarity Diagnostic")}
+                className="w-full bg-gray-800 text-white hover:bg-gray-700 py-2 px-4 rounded text-sm font-medium mt-auto"
               >
                 Assess Data Health
               </button>
             </div>
 
             {/* Marketing Effectiveness */}
-            <div className="bg-card border border-border rounded-lg p-6">
+            <div className={`bg-card border border-border rounded-lg p-6 relative flex flex-col ${
+              showGuidedExperience && guidedTarget === "Marketing Effectiveness Diagnostic" 
+                ? 'animate-pulse bg-blue-50 dark:bg-blue-900/20 shadow-lg shadow-blue-500/25 border-blue-300 dark:border-blue-700' 
+                : ''
+            }`}>
+              {/* Contextual Guide for Marketing Business Health */}
+              {showGuidedExperience && guidedTarget === "Marketing Effectiveness Diagnostic" && (
+                <div className="absolute -top-2 -right-2 bg-blue-500 text-white text-xs px-2 py-1 rounded-full shadow-lg animate-pulse">
+                  <Target className="w-3 h-3 inline mr-1" />
+                  Start Here
+                </div>
+              )}
               <div className="flex items-center gap-3 mb-4">
                 <TrendingUp className="w-5 h-5 text-muted-foreground" />
                 <h3 className="text-lg font-semibold text-foreground">Marketing Effectiveness</h3>
               </div>
               <p className="text-sm text-muted-foreground mb-4">Essential marketing practices for business success</p>
               
-              <div className="space-y-3 mb-6">
+              <div className="space-y-3 mb-6 flex-grow">
                 <div className="flex items-center gap-3">
                   <div className="w-3 h-3 bg-green-500 rounded-full"></div>
                   <span className="text-sm text-foreground">Target Audience</span>
@@ -962,27 +1078,33 @@ export default function Dashboard({ onBack, onLogoClick, navigateToView, onDashb
               </div>
               
               <button 
-                onClick={() => {
-                  if (typeof window !== 'undefined') {
-                    window.scrollTo(0, 0)
-                  }
-                  onExploreTools()
-                }}
-                className="w-full bg-gray-800 text-white hover:bg-gray-700 py-2 px-4 rounded text-sm font-medium"
+                onClick={() => handleBusinessHealthNavigation("Marketing Effectiveness Diagnostic")}
+                className="w-full bg-gray-800 text-white hover:bg-gray-700 py-2 px-4 rounded text-sm font-medium mt-auto"
               >
                 Assess Marketing Health
               </button>
             </div>
 
             {/* Cash Flow & Financial Clarity */}
-            <div className="bg-card border border-border rounded-lg p-6">
+            <div className={`bg-card border border-border rounded-lg p-6 relative flex flex-col ${
+              showGuidedExperience && guidedTarget === "Cash Flow & Financial Clarity Diagnostic" 
+                ? 'animate-pulse bg-blue-50 dark:bg-blue-900/20 shadow-lg shadow-blue-500/25 border-blue-300 dark:border-blue-700' 
+                : ''
+            }`}>
+              {/* Contextual Guide for Cash Flow Business Health */}
+              {showGuidedExperience && guidedTarget === "Cash Flow & Financial Clarity Diagnostic" && (
+                <div className="absolute -top-2 -right-2 bg-blue-500 text-white text-xs px-2 py-1 rounded-full shadow-lg animate-pulse">
+                  <Target className="w-3 h-3 inline mr-1" />
+                  Start Here
+                </div>
+              )}
               <div className="flex items-center gap-3 mb-4">
                 <BarChart3 className="w-5 h-5 text-muted-foreground" />
                 <h3 className="text-lg font-semibold text-foreground">Cash Flow & Financial Clarity</h3>
               </div>
               <p className="text-sm text-muted-foreground mb-4">Core financial practices for stability</p>
               
-              <div className="space-y-3 mb-6">
+              <div className="space-y-3 mb-6 flex-grow">
                 <div className="flex items-center gap-3">
                   <div className="w-3 h-3 bg-green-500 rounded-full"></div>
                   <span className="text-sm text-foreground">Expense Tracking</span>
@@ -1006,13 +1128,8 @@ export default function Dashboard({ onBack, onLogoClick, navigateToView, onDashb
               </div>
               
               <button 
-                onClick={() => {
-                  if (typeof window !== 'undefined') {
-                    window.scrollTo(0, 0)
-                  }
-                  onExploreTools()
-                }}
-                className="w-full bg-gray-800 text-white hover:bg-gray-700 py-2 px-4 rounded text-sm font-medium"
+                onClick={() => handleBusinessHealthNavigation("Cash Flow & Financial Clarity Diagnostic")}
+                className="w-full bg-gray-800 text-white hover:bg-gray-700 py-2 px-4 rounded text-sm font-medium mt-auto"
               >
                 Assess Financial Health
               </button>
@@ -1029,7 +1146,7 @@ export default function Dashboard({ onBack, onLogoClick, navigateToView, onDashb
           <p className="text-muted-foreground mb-6">Get things done faster with these shortcuts.</p>
           
           <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
-            <div className="bg-card border border-border rounded-lg p-6 text-center hover:bg-card/80 transition-colors cursor-pointer" onClick={() => {
+            <div className="bg-card border border-border rounded-lg p-6 text-center hover:bg-card/80 transition-colors cursor-pointer flex flex-col" onClick={() => {
               if (typeof window !== 'undefined') {
                 window.scrollTo(0, 0)
               }
@@ -1039,95 +1156,152 @@ export default function Dashboard({ onBack, onLogoClick, navigateToView, onDashb
                 <Play className="w-6 h-6 text-white" />
               </div>
               <h3 className="font-semibold text-foreground mb-2">Start New Diagnostic</h3>
-              <p className="text-sm text-muted-foreground mb-4">Begin a fresh assessment to track your progress.</p>
-              <button className="w-full bg-transparent border border-gray-600 text-white hover:bg-gray-600 py-2 px-4 rounded text-sm">
+              <p className="text-sm text-muted-foreground mb-4 flex-grow">Begin a fresh assessment to track your progress.</p>
+              <button 
+                onClick={(e) => {
+                  e.stopPropagation()
+                  if (typeof window !== 'undefined') {
+                    window.scrollTo(0, 0)
+                  }
+                  onExploreTools()
+                }}
+                className="w-full bg-transparent border border-gray-600 text-white hover:bg-gray-600 py-2 px-4 rounded text-sm mt-auto"
+              >
                 Get Started
               </button>
             </div>
 
-            <div className="bg-card border border-border rounded-lg p-6 text-center hover:bg-card/80 transition-colors cursor-pointer">
+            <div className="bg-card border border-border rounded-lg p-6 text-center hover:bg-card/80 transition-colors cursor-pointer flex flex-col">
               <div className="w-12 h-12 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-4">
                 <Download className="w-6 h-6 text-white" />
               </div>
               <h3 className="font-semibold text-foreground mb-2">Download Reports</h3>
-              <p className="text-sm text-muted-foreground mb-4">
-                {reports.length > 0 ? `${reports.length} report${reports.length > 1 ? 's' : ''} available` : 'No reports available yet'}
-              </p>
-              <button 
-                onClick={() => reports.length > 0 ? handleReportDownload(reports[0]) : onExploreTools()}
-                className={`w-full py-2 px-4 rounded text-sm ${
-                  reports.length > 0 
-                    ? 'bg-transparent border border-gray-600 text-white hover:bg-gray-600' 
-                    : 'bg-gray-600 text-gray-300 cursor-not-allowed'
-                }`}
-              >
-                {reports.length > 0 ? 'Download All' : 'Generate First'}
-              </button>
-            </div>
-
-            <div className="bg-card border border-border rounded-lg p-6 text-center hover:bg-card/80 transition-colors cursor-pointer">
-              <div className="w-12 h-12 bg-purple-500 rounded-full flex items-center justify-center mx-auto mb-4">
-                <FileText className="w-6 h-6 text-white" />
-              </div>
-              <h3 className="font-semibold text-foreground mb-2">Get Detailed Reports</h3>
-              <p className="text-sm text-muted-foreground mb-4">
+              <p className="text-sm text-muted-foreground mb-4 flex-grow">
                 {diagnosticProgress.filter(d => d.completed).length > 0 
-                  ? `${diagnosticProgress.filter(d => d.completed).length} diagnostic${diagnosticProgress.filter(d => d.completed).length > 1 ? 's' : ''} ready for detailed reports` 
-                  : 'Complete a diagnostic to get detailed reports'}
+                  ? `${diagnosticProgress.filter(d => d.completed).length} diagnostic${diagnosticProgress.filter(d => d.completed).length > 1 ? 's' : ''} ready for download` 
+                  : 'Complete diagnostics to download reports'}
               </p>
               <button 
                 onClick={() => {
                   if (diagnosticProgress.filter(d => d.completed).length > 0) {
-                    // Navigate to email capture for the first completed diagnostic
-                    const completedDiagnostic = diagnosticProgress.find(d => d.completed)
-                    if (completedDiagnostic) {
-                      navigateToView("email-capture")
-                    }
+                    handleDownloadAllReports()
                   } else {
+                    if (typeof window !== 'undefined') {
+                      window.scrollTo(0, 0)
+                    }
                     onExploreTools()
                   }
                 }}
-                className={`w-full py-2 px-4 rounded text-sm ${
+                disabled={isDownloading}
+                className={`w-full py-2 px-4 rounded text-sm mt-auto flex items-center justify-center gap-2 ${
                   diagnosticProgress.filter(d => d.completed).length > 0 
-                    ? 'bg-transparent border border-gray-600 text-white hover:bg-gray-600' 
+                    ? 'bg-green-600 text-white hover:bg-green-700 disabled:bg-gray-600 disabled:cursor-not-allowed' 
                     : 'bg-gray-600 text-gray-300 cursor-not-allowed'
                 }`}
               >
-                {diagnosticProgress.filter(d => d.completed).length > 0 ? 'Get Detailed Report' : 'Complete First'}
+                <Download className="w-4 h-4" />
+                {diagnosticProgress.filter(d => d.completed).length > 0 
+                  ? (isDownloading ? 'Generating...' : `Download All (${diagnosticProgress.filter(d => d.completed).length})`)
+                  : 'Complete First'
+                }
               </button>
             </div>
 
-            <div className="bg-card border border-border rounded-lg p-6 text-center hover:bg-card/80 transition-colors cursor-pointer">
+            <div className="bg-card border border-border rounded-lg p-6 text-center hover:bg-card/80 transition-colors cursor-pointer flex flex-col">
+              <div className="w-12 h-12 bg-purple-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                <FileText className="w-6 h-6 text-white" />
+              </div>
+              <h3 className="font-semibold text-foreground mb-2">Get Detailed Reports</h3>
+              <p className="text-sm text-muted-foreground mb-4 flex-grow">
+                {diagnosticProgress.filter(d => d.completed).length > 0 
+                  ? `${diagnosticProgress.filter(d => d.completed).length} diagnostic${diagnosticProgress.filter(d => d.completed).length > 1 ? 's' : ''} ready for detailed reports` 
+                  : 'Complete a diagnostic to get detailed reports'}
+              </p>
+              <div className="space-y-2 mt-auto">
+                <button 
+                  onClick={() => {
+                    if (diagnosticProgress.filter(d => d.completed).length > 0) {
+                      // Navigate to email capture for the first completed diagnostic
+                      const completedDiagnostic = diagnosticProgress.find(d => d.completed)
+                      if (completedDiagnostic) {
+                        // Store the diagnostic data in sessionStorage so the email capture can access it
+                        sessionStorage.setItem('dashboard_email_capture', JSON.stringify({
+                          toolName: completedDiagnostic.toolName,
+                          score: completedDiagnostic.score,
+                          answers: completedDiagnostic.answers
+                        }))
+                        console.log(`📧 Navigating to email capture with data: ${completedDiagnostic.toolName}, Score: ${completedDiagnostic.score}`)
+                        navigateToView("email-capture")
+                      }
+                    } else {
+                      if (typeof window !== 'undefined') {
+                        window.scrollTo(0, 0)
+                      }
+                      onExploreTools()
+                    }
+                  }}
+                  className={`w-full py-2 px-4 rounded text-sm ${
+                    diagnosticProgress.filter(d => d.completed).length > 0 
+                      ? 'bg-transparent border border-border text-foreground hover:bg-muted' 
+                      : 'bg-muted text-muted-foreground cursor-not-allowed'
+                  }`}
+                >
+                  {diagnosticProgress.filter(d => d.completed).length > 0 ? 'Get Detailed Report' : 'Complete First'}
+                </button>
+                
+                {diagnosticProgress.filter(d => d.completed).length > 1 && (
+                  <button 
+                    onClick={handleDownloadAllReports}
+                    disabled={isDownloading}
+                    className="w-full py-2 px-4 rounded text-sm bg-blue-600 text-white hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  >
+                    <Download className="w-4 h-4" />
+                    {isDownloading ? 'Generating...' : `Download All (${diagnosticProgress.filter(d => d.completed).length})`}
+                  </button>
+                )}
+              </div>
+            </div>
+
+            <div className="bg-card border border-border rounded-lg p-6 text-center hover:bg-card/80 transition-colors cursor-pointer flex flex-col">
               <div className="w-12 h-12 bg-purple-500 rounded-full flex items-center justify-center mx-auto mb-4">
                 <Share2 className="w-6 h-6 text-white" />
               </div>
               <h3 className="font-semibold text-foreground mb-2">Share Results</h3>
-              <p className="text-sm text-muted-foreground mb-4">
+              <p className="text-sm text-muted-foreground mb-4 flex-grow">
                 {reports.length > 0 ? 'Share your progress with your team or advisors.' : 'Complete a diagnostic to share results.'}
               </p>
               <button 
-                onClick={() => reports.length > 0 ? handleShare(reports[0]) : onExploreTools()}
-                className={`w-full py-2 px-4 rounded text-sm ${
+                onClick={() => {
+                  if (reports.length > 0) {
+                    handleShare(reports[0])
+                  } else {
+                    if (typeof window !== 'undefined') {
+                      window.scrollTo(0, 0)
+                    }
+                    onExploreTools()
+                  }
+                }}
+                className={`w-full py-2 px-4 rounded text-sm mt-auto ${
                   reports.length > 0 
-                    ? 'bg-transparent border border-gray-600 text-white hover:bg-gray-600' 
-                    : 'bg-gray-600 text-gray-300 cursor-not-allowed'
+                    ? 'bg-transparent border border-border text-foreground hover:bg-muted' 
+                    : 'bg-muted text-muted-foreground cursor-not-allowed'
                 }`}
               >
                 {reports.length > 0 ? 'Share Now' : 'Complete First'}
               </button>
             </div>
 
-            <div className="bg-card border border-border rounded-lg p-6 text-center hover:bg-card/80 transition-colors cursor-pointer">
+            <div className="bg-card border border-border rounded-lg p-6 text-center hover:bg-card/80 transition-colors cursor-pointer flex flex-col">
               <div className="w-12 h-12 border-2 border-orange-500 rounded-full flex items-center justify-center mx-auto mb-4">
                 <Target className="w-6 h-6 text-orange-500" />
               </div>
               <h3 className="font-semibold text-foreground mb-2">Assess Phase</h3>
-              <p className="text-sm text-muted-foreground mb-4">
+              <p className="text-sm text-muted-foreground mb-4 flex-grow">
                 {phaseData.completed ? 'Reassess your business phase for updated insights.' : 'Take the phase assessment to understand your business stage.'}
               </p>
               <button 
                 onClick={handlePhaseTest}
-                className="w-full bg-transparent border border-gray-600 text-white hover:bg-gray-600 py-2 px-4 rounded text-sm"
+                className="w-full bg-transparent border border-border text-foreground hover:bg-muted py-2 px-4 rounded text-sm mt-auto"
               >
                 {phaseData.completed ? 'Reassess Now' : 'Assess Now'}
               </button>
@@ -1148,42 +1322,49 @@ export default function Dashboard({ onBack, onLogoClick, navigateToView, onDashb
             {diagnosticProgress.filter(d => d.completed).length > 0 ? (
               <div className="space-y-4">
                 {diagnosticProgress.filter(d => d.completed).slice(0, 3).map((diagnostic, index) => {
-                  // Generate insights based on the diagnostic results
-                  const yesAnswers = diagnostic.answers.filter(a => a.answer === "Yes")
-                  const noAnswers = diagnostic.answers.filter(a => a.answer === "No")
-                  const yesCount = yesAnswers.length
-                  const noCount = noAnswers.length
+                  // Get stored insights from API
+                  const storedInsights = getDiagnosticInsights(diagnostic.toolName)
                   
+                  // Fallback to generated insights if no stored insights
                   let insights = []
-                  
-                  if (yesCount === 10) {
-                    insights = [
-                      "Excellent! Your business shows strong practices across all areas.",
-                      "You have a solid foundation for growth and scaling.",
-                      "Consider advanced optimization opportunities for next-level growth."
-                    ]
-                  } else if (noCount === 10) {
-                    insights = [
-                      "Taking this diagnostic is your first step toward business success.",
-                      "Start with one simple improvement this week.",
-                      "Get your detailed report to see which steps will have the biggest impact."
-                    ]
-                  } else if (yesCount >= 7) {
-                    insights = [
-                      `You have strong practices in ${yesCount} out of 10 areas.`,
-                      `Focus on the ${noCount} areas for improvement to optimize further.`,
-                      "Your foundation is solid - now optimize for growth."
-                    ]
+                  if (storedInsights && storedInsights.length > 0) {
+                    insights = storedInsights.map(insight => insight.description)
                   } else {
-                    insights = [
-                      `You have ${yesCount} good practices in place.`,
-                      `Focus on the ${noCount} areas that need attention.`,
-                      "Start with the easiest improvements for quick wins."
-                    ]
+                    // Generate fallback insights based on the diagnostic results
+                    const yesAnswers = diagnostic.answers.filter(a => a.answer === "Yes")
+                    const noAnswers = diagnostic.answers.filter(a => a.answer === "No")
+                    const yesCount = yesAnswers.length
+                    const noCount = noAnswers.length
+                    
+                    if (yesCount === 10) {
+                      insights = [
+                        "Excellent! Your business shows strong practices across all areas.",
+                        "You have a solid foundation for growth and scaling.",
+                        "Consider advanced optimization opportunities for next-level growth."
+                      ]
+                    } else if (noCount === 10) {
+                      insights = [
+                        "Taking this diagnostic is your first step toward business success.",
+                        "Start with one simple improvement this week.",
+                        "Get your detailed report to see which steps will have the biggest impact."
+                      ]
+                    } else if (yesCount >= 7) {
+                      insights = [
+                        `You have strong practices in ${yesCount} out of 10 areas.`,
+                        `Focus on the ${noCount} areas for improvement to optimize further.`,
+                        "Your foundation is solid - now optimize for growth."
+                      ]
+                    } else {
+                      insights = [
+                        `You have ${yesCount} good practices in place.`,
+                        `Focus on the ${noCount} areas that need attention.`,
+                        "Start with the easiest improvements for quick wins."
+                      ]
+                    }
                   }
                   
                   return (
-                    <div key={index} className="p-4 bg-gray-800/50 rounded-lg">
+                    <div key={index} className="p-4 bg-muted/50 rounded-lg">
                       <div className="flex items-center justify-between mb-3">
                         <h4 className="font-medium text-foreground">{diagnostic.toolName}</h4>
                         <span className="text-sm text-blue-500">{diagnostic.score}%</span>
@@ -1196,6 +1377,7 @@ export default function Dashboard({ onBack, onLogoClick, navigateToView, onDashb
                           </div>
                         ))}
                       </div>
+
                     </div>
                   )
                 })}
@@ -1214,7 +1396,7 @@ export default function Dashboard({ onBack, onLogoClick, navigateToView, onDashb
                     window.scrollTo(0, 0)
                   }
                   onExploreTools()
-                }} className="bg-black text-white hover:bg-gray-800 py-2 px-4 rounded text-sm font-medium">
+                }} className="bg-foreground text-background hover:bg-foreground/90 py-2 px-4 rounded text-sm font-medium">
                   Start Diagnostic
                 </button>
               </div>
@@ -1230,23 +1412,27 @@ export default function Dashboard({ onBack, onLogoClick, navigateToView, onDashb
             <p className="text-sm text-muted-foreground mb-6">Your latest diagnostic activities and progress</p>
             <div className="space-y-3 max-h-64 overflow-y-auto">
               {activities.length > 0 ? (
-                activities.map((activity, index) => (
-                  <div key={activity.id} className="flex items-center gap-3 p-3 hover:bg-gray-800 rounded-lg transition-colors cursor-pointer">
+                activities.map((activity) => (
+                  <div key={activity.id} className="flex items-center gap-3 p-3 hover:bg-muted rounded-lg transition-colors cursor-pointer">
                     <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                      activity.type === 'phase_started' ? 'bg-purple-400' :
                       activity.type === 'phase_completed' ? 'bg-purple-500' :
+                      activity.type === 'diagnostic_started' ? 'bg-blue-400' :
                       activity.type === 'diagnostic_completed' ? 'bg-green-500' :
-                      activity.type === 'report_requested' ? 'bg-blue-500' :
-                      activity.type === 'report_downloaded' ? 'bg-orange-500' :
+                      activity.type === 'report_viewed' ? 'bg-blue-400' :
+                      activity.type === 'report_sent' ? 'bg-blue-500' :
                       'bg-blue-500'
                     }`}>
-                      {activity.type === 'phase_completed' ? (
+                      {activity.type === 'phase_started' || activity.type === 'phase_completed' ? (
                         <Target className="w-4 h-4 text-white" />
+                      ) : activity.type === 'diagnostic_started' ? (
+                        <Play className="w-4 h-4 text-white" />
                       ) : activity.type === 'diagnostic_completed' ? (
                         <CheckCircle className="w-4 h-4 text-white" />
-                      ) : activity.type === 'report_requested' ? (
+                      ) : activity.type === 'report_viewed' ? (
+                        <Eye className="w-4 h-4 text-white" />
+                      ) : activity.type === 'report_sent' ? (
                         <FileText className="w-4 h-4 text-white" />
-                      ) : activity.type === 'report_downloaded' ? (
-                        <Download className="w-4 h-4 text-white" />
                       ) : (
                         <Play className="w-4 h-4 text-white" />
                       )}
@@ -1256,8 +1442,8 @@ export default function Dashboard({ onBack, onLogoClick, navigateToView, onDashb
                       <p className="text-xs text-muted-foreground">
                         {activity.type === 'diagnostic_completed' && activity.score ? `Scored ${activity.score}%` :
                          activity.type === 'phase_completed' && activity.score ? `Phase: ${activity.phase} (${activity.score}%)` :
-                         activity.type === 'report_requested' ? 'Report requested via email' :
-                         activity.type === 'report_downloaded' ? 'Report downloaded' :
+                         activity.type === 'report_sent' ? 'Detailed report sent' :
+                         activity.type === 'report_viewed' ? 'Partial report seen' :
                          'Activity logged'}
                       </p>
                       <p className="text-xs text-muted-foreground">{formatTimestamp(activity.timestamp)}</p>
@@ -1269,8 +1455,8 @@ export default function Dashboard({ onBack, onLogoClick, navigateToView, onDashb
                 ))
               ) : (
                 <div className="text-center py-8">
-                  <div className="w-12 h-12 bg-gray-500 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <Activity className="w-6 h-6 text-white" />
+                  <div className="w-12 h-12 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Activity className="w-6 h-6 text-muted-foreground" />
                   </div>
                   <p className="text-sm text-muted-foreground">No recent activity</p>
                   <p className="text-xs text-muted-foreground mt-1">Start a diagnostic to see your activity here</p>
@@ -1338,7 +1524,7 @@ export default function Dashboard({ onBack, onLogoClick, navigateToView, onDashb
           
           {selectedReport && (
             <div className="space-y-4">
-              <div className="flex items-center justify-between p-4 bg-gray-800 rounded-lg">
+              <div className="flex items-center justify-between p-4 bg-muted rounded-lg">
                 <div>
                   <h3 className="font-semibold text-foreground">{selectedReport.toolName}</h3>
                   <p className="text-sm text-muted-foreground">Completed on {new Date(selectedReport.requestedAt).toLocaleDateString()}</p>
@@ -1353,6 +1539,15 @@ export default function Dashboard({ onBack, onLogoClick, navigateToView, onDashb
                 <div className="flex items-center justify-between">
                   <h4 className="font-medium text-foreground">Report Summary</h4>
                   <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleDownloadReport(selectedReport)}
+                      disabled={isDownloading}
+                    >
+                      <Download className="w-4 h-4 mr-2" />
+                      {isDownloading ? 'Generating...' : 'Download PDF'}
+                    </Button>
                     <Button
                       variant="outline"
                       size="sm"

@@ -64,48 +64,63 @@ export async function saveQuestionnaireResponseSimple(data: {
   questionText: string
   answer: 'Yes' | 'No'
 }): Promise<QuestionnaireResponse | null> {
-  // Return null if supabase is not initialized
-  if (!supabase) {
-    console.log('Database not connected - answer not saved:', data)
+  try {
+    // Check if Supabase environment variables are set
+    if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+      console.log('⚠️ Supabase environment variables not set - skipping database save:', data)
+      return null
+    }
+
+    // Return null if supabase is not initialized
+    if (!supabase) {
+      console.log('⚠️ Database not connected - answer not saved:', data)
+      return null
+    }
+
+    const questionToken = questionTokens[data.toolName as keyof typeof questionTokens]?.[data.questionIndex]
+    
+    if (!questionToken) {
+      console.warn(`⚠️ Invalid question index ${data.questionIndex} for tool ${data.toolName} - skipping database save`)
+      return null
+    }
+
+    const response = {
+      session_id: data.sessionId,
+      user_name: 'Anonymous User',
+      email_address: 'anonymous@example.com',
+      phone_number: null,
+      tool_name: data.toolName,
+      question_token: questionToken,
+      question_text: data.questionText,
+      answer: data.answer
+    }
+
+    console.log(`💾 Saving to database:`, { 
+      session_id: data.sessionId, 
+      tool_name: data.toolName, 
+      question_token: questionToken, 
+      answer: data.answer 
+    })
+
+    const { data: savedResponse, error } = await supabase
+      .from('nblktool_questionnaire_responses')
+      .insert(response)
+      .select()
+      .single()
+
+    if (error) {
+      console.error('❌ Database error saving response:', error)
+      // Don't throw error, just return null to allow the diagnostic to continue
+      return null
+    }
+
+    console.log(`✅ Successfully saved to database:`, savedResponse)
+    return savedResponse
+  } catch (error) {
+    console.error('❌ Unexpected error in saveQuestionnaireResponseSimple:', error)
+    // Don't throw error, just return null to allow the diagnostic to continue
     return null
   }
-
-  const questionToken = questionTokens[data.toolName as keyof typeof questionTokens]?.[data.questionIndex]
-  
-  if (!questionToken) {
-    throw new Error(`Invalid question index ${data.questionIndex} for tool ${data.toolName}`)
-  }
-
-  const response = {
-    session_id: data.sessionId,
-    user_name: 'Anonymous User',
-    email_address: 'anonymous@example.com',
-    phone_number: null,
-    tool_name: data.toolName,
-    question_token: questionToken,
-    question_text: data.questionText,
-    answer: data.answer
-  }
-
-  console.log(`Saving to database:`, { 
-    session_id: data.sessionId, 
-    tool_name: data.toolName, 
-    question_token: questionToken, 
-    answer: data.answer 
-  })
-
-  const { data: savedResponse, error } = await supabase
-    .from('nblktool_questionnaire_responses')
-    .insert(response)
-    .select()
-    .single()
-
-  if (error) {
-    console.error('Error saving response:', error)
-    throw error
-  }
-
-  return savedResponse
 }
 
 // ============================================

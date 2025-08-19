@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { ChevronLeft, MoreVertical, Mail, Phone } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -11,7 +11,8 @@ import Image from "next/image"
 import { questionSets } from "@/lib/questions"
 import { saveQuestionnaireResponseSimple, generateSessionId } from "@/lib/simple-supabase-api"
 import type { DiagnosticAnswer } from "@/app/page"
-import { saveDiagnosticProgress, getResumeData } from "@/lib/dashboard-tracking"
+import { saveDiagnosticProgress, getResumeData, saveDiagnosticInsights } from "@/lib/dashboard-tracking"
+import { logActivity, ActivityTypes } from "@/lib/activity-manager"
 
 interface DiagnosticFlowProps {
   toolName: string
@@ -45,6 +46,13 @@ export default function DiagnosticFlow({ toolName, onComplete, onBack, onLogoCli
       setCurrentQuestionIndex(existingProgress.currentQuestion)
       setAnswers(existingProgress.answers)
       setIsResuming(true)
+      
+      // Track diagnostic resumed
+      logActivity({
+        type: ActivityTypes.DIAGNOSTIC_STARTED,
+        toolName,
+        description: `Resumed ${toolName} from question ${existingProgress.currentQuestion}`
+      })
     } else {
       const newSessionId = generateSessionId()
       setSessionId(newSessionId)
@@ -52,7 +60,10 @@ export default function DiagnosticFlow({ toolName, onComplete, onBack, onLogoCli
     }
   }, [toolName])
 
-  const handleAnswer = async (answer: "Yes" | "No") => {
+  // Note: Removed automatic pause tracking to prevent fake entries
+  // Pause tracking should only happen when user explicitly pauses
+
+  const handleAnswer = (answer: "Yes" | "No") => {
     const newAnswer: DiagnosticAnswer = {
       questionId: currentQuestion.id,
       question: currentQuestion.text,
@@ -61,26 +72,38 @@ export default function DiagnosticFlow({ toolName, onComplete, onBack, onLogoCli
 
     setIsSaving(true)
     
-    try {
-      // Save to database with questionnaire token
-      await saveQuestionnaireResponseSimple({
-        sessionId,
-        toolName,
-        questionIndex: currentQuestionIndex,
-        questionText: currentQuestion.text,
-        answer
-      })
+    // Save to database for OpenAPI insights (but don't block if it fails)
+    console.log(`💾 Saving answer for question ${currentQuestionIndex + 1}: ${answer}`)
+    
+    saveQuestionnaireResponseSimple({
+      sessionId,
+      toolName,
+      questionIndex: currentQuestionIndex,
+      questionText: currentQuestion.text,
+      answer
+    }).catch(error => {
+      console.log(`⚠️ Database save failed, but continuing: ${error}`)
+    })
 
-      console.log(`Saved answer for question ${currentQuestionIndex + 1}: ${answer}`)
+    console.log(`✅ Answer processed for question ${currentQuestionIndex + 1}: ${answer}`)
 
       // Update local state
       const newAnswers = [...answers, newAnswer]
       setAnswers(newAnswers)
 
+      // Track diagnostic start when first answer is given
+      if (currentQuestionIndex === 0) {
+        logActivity({
+          type: ActivityTypes.DIAGNOSTIC_STARTED,
+          toolName,
+          description: `Started ${toolName} Diagnostic`
+        })
+      }
+
       if (currentQuestionIndex < questions.length - 1) {
         setCurrentQuestionIndex(currentQuestionIndex + 1)
         
-        // Save progress to dashboard tracking
+        // Save progress to dashboard tracking (without activity tracking)
         saveDiagnosticProgress({
           toolName,
           completed: false,
@@ -100,7 +123,8 @@ export default function DiagnosticFlow({ toolName, onComplete, onBack, onLogoCli
         
         console.log(`🎯 Saving diagnostic completion: ${toolName}, Score: ${score}%, Completed: true`)
         
-        saveDiagnosticProgress({
+        // Save completion to dashboard tracking
+        const completionData = {
           toolName,
           completed: true,
           score,
@@ -110,19 +134,53 @@ export default function DiagnosticFlow({ toolName, onComplete, onBack, onLogoCli
           startedAt: Date.now(),
           completedAt: Date.now(),
           sessionId
+        }
+        
+        console.log(`💾 Calling saveDiagnosticProgress with completion data:`, completionData)
+        saveDiagnosticProgress(completionData)
+        
+        // Log completion instantly
+        logActivity({
+          type: ActivityTypes.DIAGNOSTIC_COMPLETED,
+          toolName,
+          score,
+          description: `${toolName} ended`
         })
         
         console.log(`✅ Diagnostic completion saved for: ${toolName}`)
         
+        // Fetch insights from API (non-blocking)
+        console.log(`🔍 Fetching insights for ${toolName}...`)
+        fetch("/api/generate-report", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            toolName,
+            score,
+            answers: newAnswers,
+            name: "Valued Client", // Default name
+            userTimezone: Intl.DateTimeFormat().resolvedOptions().timeZone
+          }),
+        })
+        .then(response => response.json())
+        .then(insightsData => {
+          if (insightsData.insights && insightsData.insights.length > 0) {
+            console.log(`💡 Saving insights for ${toolName}:`, insightsData.insights)
+            saveDiagnosticInsights(toolName, insightsData.insights)
+          } else {
+            console.warn(`⚠️ No insights received for ${toolName}`)
+          }
+        })
+        .catch(error => {
+          console.error(`❌ Error fetching insights for ${toolName}:`, error)
+        })
+        
         onComplete(newAnswers)
       }
-    } catch (error) {
-      console.error('Error saving answer:', error)
-      // Show user-friendly error message
-      alert('There was an error saving your answer. Please try again.')
-    } finally {
+      
       setIsSaving(false)
-    }
   }
 
   const handlePrevious = () => {

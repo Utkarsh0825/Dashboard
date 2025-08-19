@@ -11,6 +11,7 @@ import { Listbox, Transition } from "@headlessui/react"
 import { ChevronDownIcon, CheckIcon } from "@heroicons/react/20/solid"
 import type { DiagnosticAnswer } from "@/app/page"
 import { saveReportRequest, updateUserData } from "@/lib/dashboard-tracking"
+import { logActivity, ActivityTypes } from "@/lib/activity-manager"
 
 interface EmailCaptureProps {
   onSubmit?: (name: string, email: string) => void
@@ -299,21 +300,39 @@ Phone: (212) 598-3030
         }),
       })
 
-      if (response.ok) {
-        const responseData = await response.json()
-        console.log('✅ Email sent successfully:', responseData)
-        
-        // Save report request to dashboard tracking
+      // Always track the report request regardless of email success
+      console.log(`📧 Tracking report request for: ${toolName}, score: ${score}`)
+      console.log(`📧 About to call saveReportRequest...`)
+      
+      // Force immediate activity tracking
+      try {
         saveReportRequest({
           toolName,
           name: fullName,
           email: fullEmail,
           score
         })
+        console.log(`📧 saveReportRequest called successfully`)
         
-        // Update user data
-        updateUserData(fullName, fullEmail)
+        // Log report sent activity
+        logActivity({
+          type: ActivityTypes.REPORT_SENT,
+          toolName,
+          score,
+          description: `Detailed report sent via email for ${toolName}`
+        })
         
+        console.log(`✅ Email activity tracked successfully`)
+      } catch (error) {
+        console.error(`❌ Error calling saveReportRequest:`, error)
+      }
+      
+      // Update user data
+      updateUserData(fullName, fullEmail)
+      
+      if (response.ok) {
+        const responseData = await response.json()
+        console.log('✅ Email sent successfully:', responseData)
         // Success will be shown after loading screen completes
       } else {
         const errorData = await response.text()

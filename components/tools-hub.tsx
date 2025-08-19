@@ -74,6 +74,8 @@ export default function ToolsHub({ onToolSelect, onLogoClick, completedTools = [
   const cardsContainerRef = useRef<HTMLDivElement>(null)
   const [completionTimes, setCompletionTimes] = useState<Record<string, number>>({})
   const mobileMenuRef = useRef<HTMLDivElement>(null)
+  const [showGuidedExperience, setShowGuidedExperience] = useState(false)
+  const [guidedTarget, setGuidedTarget] = useState<string>('')
 
   // Initialize completion times from sessionStorage
   useEffect(() => {
@@ -102,6 +104,41 @@ export default function ToolsHub({ onToolSelect, onLogoClick, completedTools = [
       sessionStorage.setItem('toolCompletionTimes', JSON.stringify(newTimes))
     }
   }, [completedTools])
+
+
+
+  // Check for guided navigation from dashboard
+  useEffect(() => {
+    const guidedNavigation = sessionStorage.getItem('dashboard_guided_navigation')
+    if (guidedNavigation) {
+      console.log(`🎯 Guided navigation detected: ${guidedNavigation}`)
+      
+      // Handle different navigation types
+      if (guidedNavigation.startsWith('progress_overview_')) {
+        // For progress overview navigation, extract the tool name
+        const toolBackendName = guidedNavigation.replace('progress_overview_', '')
+        setGuidedTarget(`business_health_${toolBackendName}`) // Use same format as business health
+      } else {
+        setGuidedTarget(guidedNavigation)
+      }
+      
+      setShowGuidedExperience(true)
+      
+      // Clear the flag
+      sessionStorage.removeItem('dashboard_guided_navigation')
+      
+      // Scroll to top immediately without animation
+      if (typeof window !== 'undefined') {
+        window.scrollTo(0, 0)
+      }
+      
+      // Clear guided experience after 30 seconds
+      setTimeout(() => {
+        setShowGuidedExperience(false)
+        setGuidedTarget('')
+      }, 30000)
+    }
+  }, [])
 
   const getTimeAgo = (timestamp: number) => {
     const seconds = Math.floor((Date.now() - timestamp) / 1000)
@@ -169,6 +206,7 @@ export default function ToolsHub({ onToolSelect, onLogoClick, completedTools = [
 
   return (
     <div className="min-h-screen flex flex-col bg-background text-foreground">
+
       {/* Navigation Header */}
       <header className="sticky top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-md border-b border-border">
         <div className="max-w-6xl mx-auto px-8 py-6 flex items-center justify-between">
@@ -316,14 +354,14 @@ export default function ToolsHub({ onToolSelect, onLogoClick, completedTools = [
       <main className="mt-5 flex-1 px-6 py-2 max-w-5xl mx-auto w-full">
         
         {/* Step 1: Getting Started Section */}
-        <div className={`space-y-4 mb-8 transition-opacity duration-300 ${phaseCompleted ? 'opacity-60' : 'opacity-100'}`}>
+        <div id="phase-assessment-section" className={`space-y-4 mb-8 transition-opacity duration-300 ${phaseCompleted ? 'opacity-60' : 'opacity-100'}`}>
           <h2 className="text-xl font-semibold mb-4 pl-2 text-foreground">Step 1: Discover Your Business Phase</h2>
           <div className="space-y-3">
             <motion.div
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
               whileHover={{ scale: 1.03 }}
-              className="cursor-pointer"
+              className={`cursor-pointer relative ${showGuidedExperience && guidedTarget === 'phase_assessment' ? 'animate-pulse' : ''}`}
             >
               <Card
                 onClick={() => {
@@ -331,8 +369,19 @@ export default function ToolsHub({ onToolSelect, onLogoClick, completedTools = [
                   // Scroll to top when opening modal
                   window.scrollTo(0, 0)
                 }}
-                className="transition-all bg-card border border-border"
+                className={`transition-all bg-card border border-border ${
+                  showGuidedExperience && guidedTarget === 'phase_assessment' 
+                    ? 'bg-blue-50 dark:bg-blue-900/20 shadow-lg shadow-blue-500/25 border-blue-300 dark:border-blue-700' 
+                    : ''
+                }`}
               >
+                            {/* Contextual Guide for Phase Assessment */}
+            {showGuidedExperience && guidedTarget === 'phase_assessment' && (
+              <div className="absolute -top-2 -right-2 bg-blue-500 text-white text-xs px-2 py-1 rounded-full shadow-lg animate-pulse">
+                <Target className="w-3 h-3 inline mr-1" />
+                Start Here
+              </div>
+            )}
                 <CardHeader className="flex flex-row items-center gap-5">
                   <div className="flex items-center gap-4">
                     <Target className="w-8 h-8 text-foreground" />
@@ -348,7 +397,7 @@ export default function ToolsHub({ onToolSelect, onLogoClick, completedTools = [
         </div>
 
         {/* Step 2: Assess Your Business */}
-        <div className={`space-y-4 mb-8 transition-opacity duration-300 ${phaseCompleted ? 'opacity-100' : 'opacity-60'}`}>
+        <div id="tools-section" className={`space-y-4 mb-8 transition-opacity duration-300 ${phaseCompleted ? 'opacity-100' : 'opacity-60'}`}>
           <h2 className="text-xl font-semibold mb-4 pl-2 text-foreground">Step 2: Dive Into the Modules</h2>
           <p className="text-muted-foreground mb-2 pl-2">
             Pick any topic that matters — like cash flow, marketing, or data hygiene. Get a personalized result for each one. Sign up to track your progress, complete all modules, and unlock a full diagnostic report with cross-functional insights.
@@ -364,12 +413,23 @@ export default function ToolsHub({ onToolSelect, onLogoClick, completedTools = [
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
                     whileHover={{ scale: 1.03 }}
-          className="cursor-pointer"
+          className={`cursor-pointer relative ${showGuidedExperience && guidedTarget === `business_health_${tool.backendName}` ? 'animate-pulse' : ''}`}
         >
           <Card
             onClick={() => toggleExpand(index)}
-                      className="transition-all bg-card border border-border"
+                      className={`transition-all bg-card border border-border ${
+                        showGuidedExperience && guidedTarget === `business_health_${tool.backendName}` 
+                          ? 'bg-blue-50 dark:bg-blue-900/20 shadow-lg shadow-blue-500/25 border-blue-300 dark:border-blue-700' 
+                          : ''
+                      }`}
           >
+            {/* Contextual Guide for Diagnostic Tools */}
+            {showGuidedExperience && guidedTarget === `business_health_${tool.backendName}` && (
+              <div className="absolute -top-2 -right-2 bg-blue-500 text-white text-xs px-2 py-1 rounded-full shadow-lg animate-pulse">
+                <Target className="w-3 h-3 inline mr-1" />
+                Recommended
+              </div>
+            )}
                   <CardHeader className="flex flex-row items-center gap-5">
                         <div className="flex items-center gap-4">
                           <tool.icon className="w-8 h-8 text-foreground" />
@@ -550,6 +610,7 @@ export default function ToolsHub({ onToolSelect, onLogoClick, completedTools = [
           setTimeout(() => setStep2Blinking(true), 400)
           setTimeout(() => setStep2Blinking(false), 600)
         }}
+        onDashboard={onDashboard}
       />
 
       {/* Footer Link Dialogs */}

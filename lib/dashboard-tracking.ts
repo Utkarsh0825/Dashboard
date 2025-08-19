@@ -19,6 +19,9 @@ export interface DiagnosticProgress {
   startedAt: number
   completedAt?: number
   sessionId: string
+  insights?: Array<{
+    description: string
+  }>
 }
 
 export interface DiagnosticAnswer {
@@ -27,15 +30,7 @@ export interface DiagnosticAnswer {
   answer: "Yes" | "No"
 }
 
-export interface UserActivity {
-  id: string
-  type: 'phase_completed' | 'diagnostic_started' | 'diagnostic_completed' | 'report_requested' | 'report_downloaded'
-  toolName?: string
-  phase?: string
-  score?: number
-  timestamp: number
-  description: string
-}
+
 
 export interface ReportData {
   toolName: string
@@ -55,7 +50,6 @@ export interface DashboardData {
   }
   phase: PhaseData
   diagnostics: DiagnosticProgress[]
-  activities: UserActivity[]
   reports: ReportData[]
   insights: any[]
 }
@@ -102,7 +96,6 @@ const getDefaultDashboardData = (): DashboardData => ({
     answers: []
   },
   diagnostics: [],
-  activities: [],
   reports: [],
   insights: []
 })
@@ -114,27 +107,15 @@ export const saveDashboardData = (data: DashboardData) => {
   localStorage.setItem(STORAGE_KEYS.DASHBOARD_DATA, JSON.stringify(data))
 }
 
-// Update user activity
-export const updateUserActivity = (activity: Omit<UserActivity, 'id' | 'timestamp'>) => {
-  console.log(`📝 Adding activity: ${activity.type} - ${activity.description}`)
-  
-  const data = getDashboardData()
-  const newActivity: UserActivity = {
-    ...activity,
-    id: generateId(),
-    timestamp: Date.now()
-  }
-  
-  data.activities.unshift(newActivity)
-  data.activities = data.activities.slice(0, 50) // Keep only last 50 activities
-  data.userData.lastActive = Date.now()
-  
-  console.log(`📊 Total activities now: ${data.activities.length}`)
-  console.log(`📊 Latest activity: ${newActivity.description}`)
-  
-  saveDashboardData(data)
-  return data
-}
+
+
+
+
+
+
+
+
+
 
 // Get dashboard data
 export const getDashboardData = (): DashboardData => {
@@ -160,6 +141,8 @@ export const getDashboardData = (): DashboardData => {
 
 // Phase tracking
 export const savePhaseCompletion = (phase: string, score: number, answers: boolean[]) => {
+  console.log(`💾 savePhaseCompletion called for phase: ${phase}, score: ${score}`)
+  
   const data = getDashboardData()
   data.phase = {
     completed: true,
@@ -169,14 +152,9 @@ export const savePhaseCompletion = (phase: string, score: number, answers: boole
     answers
   }
   
-  updateUserActivity({
-    type: 'phase_completed',
-    phase,
-    score,
-    description: `Completed Phase Assessment - ${phase} (${score}%)`
-  })
-  
+  console.log(`💾 Saving phase completion data to localStorage`)
   saveDashboardData(data)
+  console.log(`✅ Phase completion saved successfully`)
   return data
 }
 
@@ -199,21 +177,7 @@ export const saveDiagnosticProgress = (progress: DiagnosticProgress) => {
     console.log(`➕ Added new diagnostic: ${progress.toolName}`)
   }
   
-  // Add activity
-  if (progress.completed) {
-    updateUserActivity({
-      type: 'diagnostic_completed',
-      toolName: progress.toolName,
-      score: progress.score,
-      description: `Completed ${progress.toolName} Diagnostic (${progress.score}%)`
-    })
-  } else {
-    updateUserActivity({
-      type: 'diagnostic_started',
-      toolName: progress.toolName,
-      description: `Started ${progress.toolName} Diagnostic`
-    })
-  }
+  // Note: Activity tracking removed - only saving progress data
   
   saveDashboardData(data)
   console.log(`💾 Dashboard data saved. Total diagnostics: ${data.diagnostics.length}`)
@@ -229,8 +193,33 @@ export const getAllDiagnosticProgress = (): DiagnosticProgress[] => {
   return getDashboardData().diagnostics
 }
 
+// Save insights for a diagnostic
+export const saveDiagnosticInsights = (toolName: string, insights: Array<{ description: string }>) => {
+  const data = getDashboardData()
+  const diagnostic = data.diagnostics.find(d => d.toolName === toolName)
+  
+  if (diagnostic) {
+    diagnostic.insights = insights
+    console.log(`💡 Saved insights for ${toolName}:`, insights)
+    saveDashboardData(data)
+  } else {
+    console.warn(`⚠️ No diagnostic found for ${toolName} to save insights`)
+  }
+  
+  return data
+}
+
+// Get insights for a diagnostic
+export const getDiagnosticInsights = (toolName: string): Array<{ description: string }> | null => {
+  const data = getDashboardData()
+  const diagnostic = data.diagnostics.find(d => d.toolName === toolName)
+  return diagnostic?.insights || null
+}
+
 // Report tracking
 export const saveReportRequest = (reportData: Omit<ReportData, 'requestedAt' | 'downloaded'>) => {
+  console.log(`💾 saveReportRequest called for: ${reportData.toolName}, score: ${reportData.score}`)
+  
   const data = getDashboardData()
   const newReport: ReportData = {
     ...reportData,
@@ -242,13 +231,9 @@ export const saveReportRequest = (reportData: Omit<ReportData, 'requestedAt' | '
   data.userData.name = reportData.name
   data.userData.email = reportData.email
   
-  updateUserActivity({
-    type: 'report_requested',
-    toolName: reportData.toolName,
-    score: reportData.score,
-    description: `Requested ${reportData.toolName} Report`
-  })
+
   
+  console.log(`💾 Report data saved. Total reports: ${data.reports.length}`)
   saveDashboardData(data)
   return data
 }
@@ -258,11 +243,6 @@ export const markReportDownloaded = (toolName: string) => {
   const report = data.reports.find(r => r.toolName === toolName)
   if (report) {
     report.downloaded = true
-    updateUserActivity({
-      type: 'report_downloaded',
-      toolName,
-      description: `Downloaded ${toolName} Report`
-    })
     saveDashboardData(data)
   }
   return data
@@ -278,6 +258,7 @@ export const updateUserData = (name: string, email: string) => {
   data.userData.name = name
   data.userData.email = email
   data.userData.lastActive = Date.now()
+  
   saveDashboardData(data)
   return data
 }
@@ -286,11 +267,7 @@ export const getUserData = () => {
   return getDashboardData().userData
 }
 
-// Activities
-export const getRecentActivities = (limit: number = 10): UserActivity[] => {
-  const data = getDashboardData()
-  return data.activities.slice(0, limit)
-}
+
 
 // Utility functions
 export const generateId = (): string => {
@@ -306,6 +283,7 @@ export const formatTimestamp = (timestamp: number): string => {
     return date.toLocaleTimeString('en-US', { 
       hour: '2-digit', 
       minute: '2-digit',
+      second: '2-digit',
       hour12: true 
     })
   } else {

@@ -1,16 +1,18 @@
 "use client"
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ArrowRight, BarChart3, TrendingUp, Zap, Target, CheckCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent } from '@/components/ui/dialog'
 import { savePhaseCompletion } from '@/lib/dashboard-tracking'
+import { logActivity, ActivityTypes } from '@/lib/activity-manager'
 
 interface PhaseAssessmentModalProps {
   isOpen: boolean
   onClose: () => void
   onExploreTools: () => void
+  onDashboard: () => void
 }
 
 interface Question {
@@ -121,9 +123,19 @@ const getPhaseFromYesCount = (yesCount: number): string => {
   return "Integration"
 }
 
-export default function PhaseAssessmentModal({ isOpen, onClose, onExploreTools }: PhaseAssessmentModalProps) {
+export default function PhaseAssessmentModal({ isOpen, onClose, onExploreTools, onDashboard }: PhaseAssessmentModalProps) {
   const [currentQuestion, setCurrentQuestion] = useState(0)
   const [answers, setAnswers] = useState<boolean[]>([])
+
+  // Track phase started when modal opens (only once)
+  useEffect(() => {
+    if (isOpen && currentQuestion === 0) {
+      logActivity({
+        type: ActivityTypes.PHASE_STARTED,
+        description: 'Started Phase Assessment'
+      })
+    }
+  }, [isOpen])
   const [showResult, setShowResult] = useState(false)
 
   const progress = ((currentQuestion + 1) / questions.length) * 100
@@ -138,10 +150,29 @@ export default function PhaseAssessmentModal({ isOpen, onClose, onExploreTools }
     if (currentQuestion < questions.length - 1) {
       setCurrentQuestion(currentQuestion + 1)
     } else {
-      // Save phase completion to dashboard tracking
+      // Save phase completion to dashboard tracking (only once)
       const yesCount = newAnswers.filter(answer => answer).length
       const score = Math.round((yesCount / questions.length) * 100)
-      savePhaseCompletion(phase, score, newAnswers)
+      const finalPhase = getPhaseFromYesCount(yesCount)
+      console.log(`🎯 Phase completed - calling savePhaseCompletion for phase: ${finalPhase}, score: ${score}`)
+      console.log(`📊 Phase completion data: yesCount=${yesCount}, score=${score}, finalPhase=${finalPhase}`)
+      
+      try {
+        // Save phase completion
+        const result = savePhaseCompletion(finalPhase, score, newAnswers)
+        console.log(`✅ Phase completion saved successfully:`, result)
+        
+        // Log activity instantly
+        logActivity({
+          type: ActivityTypes.PHASE_COMPLETED,
+          phase: finalPhase,
+          score,
+          description: 'Phase Assessment ended'
+        })
+      } catch (error) {
+        console.error(`❌ Error saving phase completion:`, error)
+      }
+      
       setShowResult(true)
     }
   }
@@ -309,6 +340,29 @@ export default function PhaseAssessmentModal({ isOpen, onClose, onExploreTools }
                       className="w-full bg-primary text-primary-foreground opacity-90 hover:bg-primary/90"
                     >
                       Step 2: Assess Your Business
+                    </Button>
+                  </motion.div>
+
+                  {/* Go to Dashboard Button */}
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.7 }}
+                    className="mt-4"
+                  >
+                    <Button 
+                      onClick={() => {
+                        onClose()
+                        onDashboard()
+                      }}
+                      variant="outline"
+                      size="lg"
+                      className="w-full bg-transparent border border-border text-foreground hover:bg-card/50"
+                    >
+                      <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                      </svg>
+                      Go to Dashboard
                     </Button>
                   </motion.div>
 
